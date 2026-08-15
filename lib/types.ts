@@ -8,11 +8,18 @@ export interface ExtraParam {
   value: string
 }
 
+export type AdapterId = 'nano-banana-2' | 'gpt-image-2'
+
 export interface PromptParams {
+  adapterId?: AdapterId
   positiveText: string
   negativeText?: string
   styleImages?: ReferenceImage[]
+  /** 0 = loose inspiration, 100 = strict adherence. Default: 50 */
+  styleWeight?: number
   subjectImages?: ReferenceImage[]
+  /** 0 = loose inspiration, 100 = strict adherence. Default: 50 */
+  subjectWeight?: number
   aspectRatio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:4'
   extraParams?: ExtraParam[]
 }

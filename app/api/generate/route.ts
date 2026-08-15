@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { nanoBanana2Adapter } from '@/lib/adapters/nano-banana-2'
+import { gptImage2Adapter } from '@/lib/adapters/gpt-image-2'
 import { checkRateLimit } from '@/lib/rate-limit'
 import type { PromptParams, GenerateResponse } from '@/lib/types'
 
@@ -28,16 +29,18 @@ export async function POST(req: NextRequest): Promise<NextResponse<GenerateRespo
 
   const apiKey = req.headers.get('x-api-key') ?? undefined
 
+  const adapter = body.adapterId === 'gpt-image-2' ? gptImage2Adapter : nanoBanana2Adapter
+
   try {
-    const result = await nanoBanana2Adapter.generate(body, apiKey)
+    const result = await adapter.generate(body, apiKey)
     return NextResponse.json({ success: true, data: result })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[generate]', message)
 
-    const clientMessage = /api.key|api key|authentication|unauthorized/i.test(message)
+    const clientMessage = /api.key|api key|authentication|unauthorized|incorrect api key/i.test(message)
       ? 'Clé API invalide ou manquante'
-      : /quota|rate.limit|resource.exhausted/i.test(message)
+      : /quota|rate.limit|resource.exhausted|billing/i.test(message)
       ? 'Quota API dépassé'
       : /no image/i.test(message)
       ? 'Aucune image retournée par le modèle'

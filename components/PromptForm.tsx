@@ -32,6 +32,49 @@ function readImageFile(file: File): Promise<ImageState> {
   })
 }
 
+// ── Weight slider ─────────────────────────────────────────────────────────────
+function WeightSlider({
+  value,
+  onChange,
+  lowLabel,
+  highLabel,
+}: {
+  value: number
+  onChange: (v: number) => void
+  lowLabel: string
+  highLabel: string
+}) {
+  const pct = value // 0–100
+  const label =
+    pct <= 20 ? 'Très libre'
+    : pct <= 40 ? 'Libre'
+    : pct <= 60 ? 'Équilibré'
+    : pct <= 80 ? 'Proche'
+    : 'Très proche'
+
+  return (
+    <div className="mt-3">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs text-gray-400">Fidélité à la référence</span>
+        <span className="text-xs font-medium text-violet-400">{label}</span>
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        step={10}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full h-1.5 accent-violet-500 cursor-pointer"
+      />
+      <div className="flex justify-between text-[10px] text-gray-600 mt-0.5">
+        <span>{lowLabel}</span>
+        <span>{highLabel}</span>
+      </div>
+    </div>
+  )
+}
+
 // ── Reusable multi-image upload grid ─────────────────────────────────────────
 function ImageGrid({
   images,
@@ -229,7 +272,9 @@ export default function PromptForm({ onSubmit, loading }: Props) {
   const [negativeText, setNegativeText] = useState('')
   const [aspectRatio, setAspectRatio] = useState<PromptParams['aspectRatio']>('1:1')
   const [styleImages, setStyleImages] = useState<ImageState[]>([])
+  const [styleWeight, setStyleWeight] = useState(50)
   const [subjectImages, setSubjectImages] = useState<ImageState[]>([])
+  const [subjectWeight, setSubjectWeight] = useState(50)
   const [extraParams, setExtraParams] = useState<ExtraParam[]>([])
 
   function addImages(
@@ -256,7 +301,9 @@ export default function PromptForm({ onSubmit, loading }: Props) {
       positiveText: positiveText.trim(),
       negativeText: negativeText.trim() || undefined,
       styleImages: styleImages.length > 0 ? styleImages.map(toRefImage) : undefined,
+      styleWeight: styleImages.length > 0 ? styleWeight : undefined,
       subjectImages: subjectImages.length > 0 ? subjectImages.map(toRefImage) : undefined,
+      subjectWeight: subjectImages.length > 0 ? subjectWeight : undefined,
       aspectRatio,
       extraParams: extraParams.filter((p) => p.key.trim() && p.value.trim()),
     })
@@ -302,6 +349,14 @@ export default function PromptForm({ onSubmit, loading }: Props) {
           label="Images de style"
           hint="Ambiance, couleurs, rendu"
         />
+        {styleImages.length > 0 && (
+          <WeightSlider
+            value={styleWeight}
+            onChange={setStyleWeight}
+            lowLabel="Inspiration libre"
+            highLabel="Reproduction stricte"
+          />
+        )}
       </Section>
 
       {/* Subject references */}
@@ -313,6 +368,14 @@ export default function PromptForm({ onSubmit, loading }: Props) {
           label="Images de sujet"
           hint="Personnes, objets, scènes"
         />
+        {subjectImages.length > 0 && (
+          <WeightSlider
+            value={subjectWeight}
+            onChange={setSubjectWeight}
+            lowLabel="Inspiration libre"
+            highLabel="Reproduction stricte"
+          />
+        )}
       </Section>
 
       {/* Extra params */}

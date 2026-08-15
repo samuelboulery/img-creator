@@ -6,8 +6,36 @@ const MODEL_ID = 'gemini-3.1-flash-image-preview'
 // Known Gemini imageConfig keys — anything else gets injected into the prompt text
 const GEMINI_IMAGE_CONFIG_KEYS = new Set(['imageSize', 'aspectRatio'])
 
+function weightInstruction(weight: number | undefined, type: 'style' | 'subject'): string | null {
+  const w = weight ?? 50
+  if (type === 'style') {
+    if (w >= 80) return 'Strictly replicate the style of the provided style references (colors, textures, artistic technique, mood).'
+    if (w >= 60) return 'Closely follow the style of the provided style references.'
+    if (w <= 20) return 'Use the provided style references only as distant, loose inspiration.'
+    if (w <= 40) return 'Be loosely inspired by the style of the provided style references.'
+    return null // neutral (40–60), no instruction needed
+  } else {
+    if (w >= 80) return 'The subject must strictly match the provided subject references (same person, object or scene, preserve identity and details).'
+    if (w >= 60) return 'Closely reproduce the subject shown in the subject references.'
+    if (w <= 20) return 'Use the provided subject references only as distant inspiration, feel free to reinterpret.'
+    if (w <= 40) return 'Loosely follow the subject references, reinterpretation is allowed.'
+    return null // neutral (40–60), no instruction needed
+  }
+}
+
 function buildPrompt(params: PromptParams): string {
   const parts = [params.positiveText]
+
+  // Weight instructions for references
+  if (params.styleImages?.length) {
+    const hint = weightInstruction(params.styleWeight, 'style')
+    if (hint) parts.push(hint)
+  }
+
+  if (params.subjectImages?.length) {
+    const hint = weightInstruction(params.subjectWeight, 'subject')
+    if (hint) parts.push(hint)
+  }
 
   if (params.negativeText) {
     parts.push(`Avoid: ${params.negativeText}`)
@@ -22,7 +50,7 @@ function buildPrompt(params: PromptParams): string {
     parts.push(promptHints.join(', '))
   }
 
-  return parts.join('. ')
+  return parts.join(' ')
 }
 
 function imagePart(img: ReferenceImage) {
