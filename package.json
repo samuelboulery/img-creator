@@ -1,13 +1,34 @@
 {
   "packageManager": "pnpm@10.12.1",
-  "name": "img-creator-scaffold",
+  "name": "img-creator",
   "version": "0.1.0",
   "private": true,
+  "description": "A local-first workshop for image generation — one prompt, several models, no account and no database.",
+  "license": "MIT",
+  "author": "Samuel Boulery",
+  "homepage": "https://github.com/samuelboulery/img-creator#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/samuelboulery/img-creator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/samuelboulery/img-creator/issues"
+  },
+  "keywords": [
+    "image-generation",
+    "nano-banana",
+    "gemini",
+    "gpt-image",
+    "nextjs",
+    "local-first",
+    "prompt-engineering"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test"

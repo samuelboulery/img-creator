@@ -1,7 +1,0 @@
-{
-  "dev": "pnpm dev",
-  "baseUrl": "http://localhost:3000",
-  "entryRoutes": [
-    "/"
-  ]
-}
