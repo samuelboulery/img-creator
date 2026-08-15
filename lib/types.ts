@@ -19,6 +19,15 @@ export type DrawerId = 'history' | 'recipes' | 'enrich' | 'settings'
 /** Onglets du panneau de paramètres. */
 export type PanelTab = 'recipe' | 'json'
 
+/** Les trois clés que l'utilisateur peut enregistrer dans son navigateur. */
+export type KeyKind = 'gemini' | 'openai' | 'text'
+
+/** Une génération en vol : la tuile affiche son compteur de secondes. */
+export interface PendingTile {
+  id: string
+  startedAt: number
+}
+
 export type AspectRatio = '1:1' | '16:9' | '9:16' | '4:3'
 export type Resolution = '1K' | '2K' | '4K'
 export type Batch = 1 | 2 | 4 | 8

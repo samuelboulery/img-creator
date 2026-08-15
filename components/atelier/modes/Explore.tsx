@@ -2,13 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { ArrowsOut, Sparkle, SquaresFour } from '@phosphor-icons/react/dist/ssr'
-import type { GalleryItem } from '@/lib/types'
-
-/** Une génération en vol : la tuile affiche son compteur de secondes. */
-export interface PendingTile {
-  id: string
-  startedAt: number
-}
+import type { GalleryItem, PendingTile } from '@/lib/types'
 
 function dataUrl(item: GalleryItem): string {
   return `data:${item.result.mimeType};base64,${item.result.imageBase64}`

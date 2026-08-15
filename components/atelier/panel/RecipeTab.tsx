@@ -7,9 +7,14 @@ import ReferenceGrid from './ReferenceGrid'
 import Section from './Section'
 import Slider from './Slider'
 import Switch from './Switch'
-import { randomSeed, SAMPLERS, setParam, weightLabel } from '@/lib/atelier/params'
+import {
+  randomSeed,
+  SAMPLERS,
+  setParam,
+  weightLabel,
+  type RecipeState,
+} from '@/lib/atelier/params'
 import { supports } from '@/lib/adapters/capabilities'
-import type { ImageState } from '@/lib/atelier/image-file'
 import type {
   AdapterId,
   AspectRatio,
@@ -21,25 +26,6 @@ import type {
   PersonGeneration,
   Resolution,
 } from '@/lib/types'
-
-/** Références et poids : la part de la recette qui n'est pas un réglage. */
-export interface RecipeState {
-  subjectImages: ImageState[]
-  subjectWeight: number
-  identityLock: boolean
-  styleImages: ImageState[]
-  styleWeight: number
-  paletteTransfer: boolean
-}
-
-export const DEFAULT_RECIPE_STATE: RecipeState = {
-  subjectImages: [],
-  subjectWeight: 75,
-  identityLock: false,
-  styleImages: [],
-  styleWeight: 65,
-  paletteTransfer: false,
-}
 
 const RATIOS: { value: AspectRatio; ratio: number }[] = [
   { value: '1:1', ratio: 1 },

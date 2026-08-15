@@ -1,45 +1,23 @@
 'use client'
 
-import { useEffect, useReducer, useState } from 'react'
+import AmbientBackground from '@/components/atelier/AmbientBackground'
 import CanvasHeader from '@/components/atelier/CanvasHeader'
 import Composer from '@/components/atelier/Composer'
 import Drawer from '@/components/atelier/Drawer'
 import ErrorBanner from '@/components/atelier/ErrorBanner'
 import Rail from '@/components/atelier/Rail'
 import RecipesDrawer from '@/components/atelier/drawers/RecipesDrawer'
-import SettingsDrawer, { type KeyKind } from '@/components/atelier/drawers/SettingsDrawer'
-import Explore, { type PendingTile } from '@/components/atelier/modes/Explore'
+import HistoryDrawer from '@/components/atelier/drawers/HistoryDrawer'
+import SettingsDrawer from '@/components/atelier/drawers/SettingsDrawer'
+import Explore from '@/components/atelier/modes/Explore'
+import Iterate from '@/components/atelier/modes/Iterate'
 import JsonTab from '@/components/atelier/panel/JsonTab'
-import RecipeTab, {
-  DEFAULT_RECIPE_STATE,
-  type RecipeState,
-} from '@/components/atelier/panel/RecipeTab'
+import RecipeTab from '@/components/atelier/panel/RecipeTab'
 import SettingsPanel from '@/components/atelier/panel/SettingsPanel'
-import AmbientBackground from '@/components/atelier/AmbientBackground'
-import { estimateCost } from '@/lib/atelier/cost'
-import { extractPalette } from '@/lib/atelier/palette'
-import { toImageState, toReferenceImage } from '@/lib/atelier/image-file'
-import { createRecipe } from '@/lib/atelier/recipes'
-import { DEFAULT_PARAMS } from '@/lib/atelier/params'
-import { atelierReducer, initialAtelierState, isPanelVisible } from '@/lib/atelier/reducer'
-import {
-  DEFAULT_PREFS,
-  readJson,
-  readPrefs,
-  readString,
-  STORAGE_KEYS,
-  writeJson,
-  writeString,
-  type Prefs,
-} from '@/lib/atelier/storage'
-import type {
-  DrawerId,
-  GalleryItem,
-  GenerateResponse,
-  GenerationParams,
-  GenerationRequest,
-  Recipe,
-} from '@/lib/types'
+import { isPanelVisible } from '@/lib/atelier/reducer'
+import { STORAGE_KEYS, writeJson } from '@/lib/atelier/storage'
+import { useAtelier } from '@/lib/atelier/use-atelier'
+import type { DrawerId } from '@/lib/types'
 
 const DRAWER_TITLES: Record<DrawerId, string> = {
   history: 'Historique',
@@ -48,193 +26,9 @@ const DRAWER_TITLES: Record<DrawerId, string> = {
   settings: 'Réglages',
 }
 
-const KEY_OF_ADAPTER: Record<string, KeyKind> = {
-  'nano-banana-2': 'gemini',
-  'gpt-image-2': 'openai',
-}
-
-const KEY_STORAGE: Record<KeyKind, string> = {
-  gemini: STORAGE_KEYS.geminiKey,
-  openai: STORAGE_KEYS.openaiKey,
-  text: STORAGE_KEYS.textKey,
-}
-
-// ponytail: la session gardée en localStorage est plafonnée — les images sont
-// du base64 et le quota du navigateur est de quelques Mo. Passer à IndexedDB
-// si l'historique complet devient nécessaire.
-const MAX_PERSISTED_ITEMS = 12
-
 export default function Home() {
-  const [state, dispatch] = useReducer(atelierReducer, initialAtelierState)
-  const [prompt, setPrompt] = useState('')
-  const [negative, setNegative] = useState('')
-  const [params, setParams] = useState<GenerationParams>(DEFAULT_PARAMS)
-  const [recipe, setRecipe] = useState<RecipeState>(DEFAULT_RECIPE_STATE)
-  const [items, setItems] = useState<GalleryItem[]>([])
-  const [pending, setPending] = useState<PendingTile[]>([])
-  const [keys, setKeys] = useState<Record<KeyKind, string>>({
-    gemini: '',
-    openai: '',
-    text: '',
-  })
-  const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS)
-  const [recipes, setRecipes] = useState<Recipe[]>([])
-  const [activeRecipeId, setActiveRecipeId] = useState<string | null>(null)
-  const [promptSuffix, setPromptSuffix] = useState('')
-  const [hydrated, setHydrated] = useState(false)
-
-  const activeRecipe = recipes.find((entry) => entry.id === activeRecipeId) ?? null
-
-  // Relecture du navigateur au montage : aucun appel serveur.
-  useEffect(() => {
-    setKeys({
-      gemini: readString(STORAGE_KEYS.geminiKey),
-      openai: readString(STORAGE_KEYS.openaiKey),
-      text: readString(STORAGE_KEYS.textKey),
-    })
-    setPrefs(readPrefs())
-    setParams(readJson<GenerationParams>(STORAGE_KEYS.params, DEFAULT_PARAMS))
-    setItems(readJson<GalleryItem[]>(STORAGE_KEYS.session, []))
-    setRecipes(readJson<Recipe[]>(STORAGE_KEYS.recipes, []))
-    setHydrated(true)
-  }, [])
-
-  useEffect(() => {
-    if (hydrated) writeJson(STORAGE_KEYS.params, params)
-  }, [params, hydrated])
-
-  useEffect(() => {
-    if (hydrated) writeJson(STORAGE_KEYS.session, items.slice(0, MAX_PERSISTED_ITEMS))
-  }, [items, hydrated])
-
-  useEffect(() => {
-    if (hydrated) writeJson(STORAGE_KEYS.prefs, prefs)
-  }, [prefs, hydrated])
-
-  useEffect(() => {
-    if (hydrated) writeJson(STORAGE_KEYS.recipes, recipes)
-  }, [recipes, hydrated])
-
-  function applyRecipe(entry: Recipe) {
-    setActiveRecipeId(entry.id)
-    setPromptSuffix(entry.promptSuffix)
-    setParams({ ...DEFAULT_PARAMS, ...entry.params })
-    setRecipe({
-      subjectImages: entry.subjectImages.map(toImageState),
-      subjectWeight: entry.subjectWeight,
-      identityLock: entry.identityLock,
-      styleImages: entry.styleImages.map(toImageState),
-      styleWeight: entry.styleWeight,
-      paletteTransfer: entry.paletteTransfer,
-    })
-  }
-
-  function saveCurrentRecipe(name: string) {
-    const saved = createRecipe({
-      id: crypto.randomUUID(),
-      name,
-      subjectImages: recipe.subjectImages.map(toReferenceImage),
-      subjectWeight: recipe.subjectWeight,
-      styleImages: recipe.styleImages.map(toReferenceImage),
-      styleWeight: recipe.styleWeight,
-      identityLock: recipe.identityLock,
-      paletteTransfer: recipe.paletteTransfer,
-      promptSuffix,
-      negative: negative.trim(),
-      params,
-    })
-
-    setRecipes((previous) => [...previous, saved])
-    setActiveRecipeId(saved.id)
-  }
-
-  function setKey(kind: KeyKind, value: string) {
-    setKeys((previous) => ({ ...previous, [kind]: value }))
-    writeString(KEY_STORAGE[kind], value)
-  }
-
-  const estimatedCost = estimateCost(state.adapterId, params.batch, prefs.pricing)
-  const imageKeyCount = [keys.gemini, keys.openai].filter((key) => key.trim()).length
-
-  function buildRequest(text: string): GenerationRequest {
-    return {
-      adapterId: state.adapterId,
-      prompt: text,
-      negative: negative.trim() || undefined,
-      promptSuffix: promptSuffix.trim() || undefined,
-      recipeNegative: activeRecipe?.negative,
-      subjectImages: recipe.subjectImages.map(toReferenceImage),
-      subjectWeight: recipe.subjectWeight,
-      styleImages: recipe.styleImages.map(toReferenceImage),
-      styleWeight: recipe.styleWeight,
-      identityLock: recipe.identityLock,
-      paletteTransfer: recipe.paletteTransfer,
-      params,
-    }
-  }
-
-  async function generate(fromPrompt: string, parentId: string | null = null) {
-    const text = fromPrompt.trim()
-    if (!text) return
-
-    const tile: PendingTile = { id: crypto.randomUUID(), startedAt: Date.now() }
-    setPending((previous) => [...previous, tile])
-    dispatch({ type: 'setError', error: null })
-
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-    const key = keys[KEY_OF_ADAPTER[state.adapterId]]
-    if (key) headers['x-api-key'] = key
-
-    try {
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(buildRequest(text)),
-      })
-
-      const json: GenerateResponse = await response.json()
-      if (!json.success || !json.data) throw new Error(json.error ?? 'Erreur inconnue')
-
-      const latencyMs = Date.now() - tile.startedAt
-      const created: GalleryItem[] = json.data.map((result) => ({
-        id: crypto.randomUUID(),
-        result,
-        adapterId: state.adapterId,
-        prompt: text,
-        negative: negative.trim(),
-        seed: params.seedLock ? params.seed : null,
-        params,
-        palette: null,
-        parentId,
-        recipeId: null,
-        latencyMs,
-        costEur: estimateCost(state.adapterId, 1, prefs.pricing),
-        createdAt: new Date().toISOString(),
-      }))
-
-      setItems((previous) => [...created, ...previous])
-      if (created[0]) dispatch({ type: 'select', id: created[0].id })
-
-      // La palette arrive après coup : elle ne doit pas retarder l'affichage.
-      for (const item of created) {
-        void extractPalette(
-          `data:${item.result.mimeType};base64,${item.result.imageBase64}`
-        ).then((palette) => {
-          if (!palette) return
-          setItems((previous) =>
-            previous.map((entry) => (entry.id === item.id ? { ...entry, palette } : entry))
-          )
-        })
-      }
-    } catch (error) {
-      dispatch({
-        type: 'setError',
-        error: error instanceof Error ? error.message : 'Erreur inconnue',
-      })
-    } finally {
-      setPending((previous) => previous.filter((entry) => entry.id !== tile.id))
-    }
-  }
+  const atelier = useAtelier()
+  const { state, dispatch, items, prefs } = atelier
 
   const counterLabel =
     items.length > 0
@@ -269,23 +63,29 @@ export default function Home() {
           >
             {state.openDrawer === 'settings' ? (
               <SettingsDrawer
-                keys={keys}
-                onKeyChange={setKey}
+                keys={atelier.keys}
+                onKeyChange={atelier.setKey}
                 prefs={prefs}
-                onPrefsChange={setPrefs}
+                onPrefsChange={atelier.setPrefs}
                 onReviewOnboarding={() => writeJson(STORAGE_KEYS.onboarded, false)}
               />
             ) : state.openDrawer === 'recipes' ? (
               <RecipesDrawer
-                recipes={recipes}
-                activeRecipeId={activeRecipeId}
-                onApply={applyRecipe}
-                onSaveCurrent={saveCurrentRecipe}
-                onImport={setRecipes}
+                recipes={atelier.recipes}
+                activeRecipeId={atelier.activeRecipeId}
+                onApply={atelier.applyRecipe}
+                onSaveCurrent={atelier.saveCurrentRecipe}
+                onImport={atelier.setRecipes}
+              />
+            ) : state.openDrawer === 'history' ? (
+              <HistoryDrawer
+                items={items}
+                selectedId={state.selectedId}
+                onSelect={(id) => dispatch({ type: 'select', id })}
               />
             ) : (
               <p className="text-[12.5px] text-meta">
-                Contenu livré par un ticket dédié (T-0013 et T-0018).
+                Contenu livré par le ticket T-0018.
               </p>
             )}
           </Drawer>
@@ -306,15 +106,23 @@ export default function Home() {
             {state.mode === 'explore' ? (
               <Explore
                 items={items}
-                pending={pending}
+                pending={atelier.pending}
                 selectedId={state.selectedId}
                 onSelect={(id) => dispatch({ type: 'select', id })}
                 onEnlarge={() => dispatch({ type: 'openViewer' })}
-                onDecline={(item) => generate(item.prompt, item.id)}
+                onDecline={(item) =>
+                  void atelier.generate(item.prompt, { parentId: item.id })
+                }
+              />
+            ) : state.mode === 'iterate' ? (
+              <Iterate
+                items={items}
+                selectedId={state.selectedId}
+                onSelect={(id) => dispatch({ type: 'select', id })}
               />
             ) : (
               <div className="flex h-full items-center justify-center rounded-rail border border-dashed border-dash text-[12.5px] text-meta">
-                Mode livré par un ticket dédié (T-0013 à T-0015).
+                Mode livré par un ticket dédié (T-0014 et T-0015).
               </div>
             )}
           </div>
@@ -322,23 +130,23 @@ export default function Home() {
           {state.error && (
             <ErrorBanner
               message={state.error}
-              onRetry={() => generate(prompt)}
+              onRetry={() => void atelier.generate(atelier.prompt)}
               onDismiss={() => dispatch({ type: 'setError', error: null })}
             />
           )}
 
           <Composer
-            prompt={prompt}
-            negative={negative}
-            onPromptChange={setPrompt}
-            onNegativeChange={setNegative}
-            presetName={activeRecipe?.name ?? null}
-            aspectRatio={params.aspectRatio}
-            batch={params.batch}
-            estimatedCost={estimatedCost}
-            hasEnrichKey={keys.text.trim().length > 0}
+            prompt={atelier.prompt}
+            negative={atelier.negative}
+            onPromptChange={atelier.setPrompt}
+            onNegativeChange={atelier.setNegative}
+            presetName={atelier.activeRecipe?.name ?? null}
+            aspectRatio={atelier.params.aspectRatio}
+            batch={atelier.params.batch}
+            estimatedCost={atelier.estimatedCost}
+            hasEnrichKey={atelier.keys.text.trim().length > 0}
             onEnrich={() => dispatch({ type: 'toggleDrawer', drawer: 'enrich' })}
-            onSubmit={() => generate(prompt)}
+            onSubmit={() => void atelier.generate(atelier.prompt)}
           />
         </main>
 
@@ -346,25 +154,24 @@ export default function Home() {
           <SettingsPanel
             tab={state.panelTab}
             onTabChange={(tab) => dispatch({ type: 'setPanelTab', tab })}
-            onReset={() => {
-              setParams(DEFAULT_PARAMS)
-              setRecipe(DEFAULT_RECIPE_STATE)
-            }}
-            keysSummary={`image ×${imageKeyCount} · texte ×${keys.text ? 1 : 0} · ce navigateur`}
+            onReset={atelier.resetParams}
+            keysSummary={`image ×${atelier.imageKeyCount} · texte ×${
+              atelier.keys.text ? 1 : 0
+            } · ce navigateur`}
           >
             {state.panelTab === 'recipe' ? (
               <RecipeTab
                 adapterId={state.adapterId}
-                params={params}
-                onParamsChange={setParams}
-                recipe={recipe}
-                onRecipeChange={setRecipe}
+                params={atelier.params}
+                onParamsChange={atelier.setParams}
+                recipe={atelier.recipe}
+                onRecipeChange={atelier.setRecipe}
                 openSections={state.openSections}
                 onToggleSection={(section) => dispatch({ type: 'toggleSection', section })}
-                activeRecipeName={activeRecipe?.name ?? null}
+                activeRecipeName={atelier.activeRecipe?.name ?? null}
               />
             ) : (
-              <JsonTab request={buildRequest(prompt || '…')} />
+              <JsonTab request={atelier.buildRequest(atelier.prompt || '…')} />
             )}
           </SettingsPanel>
         )}

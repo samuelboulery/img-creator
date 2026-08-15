@@ -4,9 +4,7 @@ import { useState } from 'react'
 import { Eye, EyeSlash, Key } from '@phosphor-icons/react/dist/ssr'
 import Switch from '../panel/Switch'
 import type { Prefs } from '@/lib/atelier/storage'
-import type { AdapterId } from '@/lib/types'
-
-export type KeyKind = 'gemini' | 'openai' | 'text'
+import type { AdapterId, KeyKind } from '@/lib/types'
 
 interface KeyCardProps {
   title: string

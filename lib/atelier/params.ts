@@ -1,4 +1,29 @@
-import type { GenerationParams } from '@/lib/types'
+import type { GenerationParams, ReferenceImage } from '@/lib/types'
+import type { ImageState } from './image-file'
+
+/** Références et poids : la part de la recette qui n'est pas un réglage. */
+export interface RecipeState {
+  subjectImages: ImageState[]
+  subjectWeight: number
+  identityLock: boolean
+  styleImages: ImageState[]
+  styleWeight: number
+  paletteTransfer: boolean
+}
+
+export const DEFAULT_RECIPE_STATE: RecipeState = {
+  subjectImages: [],
+  subjectWeight: 75,
+  identityLock: false,
+  styleImages: [],
+  styleWeight: 65,
+  paletteTransfer: false,
+}
+
+/** Les références telles qu'elles partent dans le payload. */
+export function referencesOf(images: ImageState[]): ReferenceImage[] {
+  return images.map(({ base64, mimeType }) => ({ base64, mimeType }))
+}
 
 export const DEFAULT_PARAMS: GenerationParams = {
   aspectRatio: '1:1',

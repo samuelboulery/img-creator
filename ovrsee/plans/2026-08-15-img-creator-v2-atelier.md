@@ -109,6 +109,16 @@
         "lib/atelier/recipes.ts",
         "tests/atelier/recipes.test.ts"
       ]
+    },
+    {
+      "sha": "8aa629a",
+      "date": "2026-08-15",
+      "files": [
+        "app/page.tsx",
+        "components/atelier/AmbientBackground.tsx",
+        "lib/atelier/palette.ts",
+        "tests/atelier/palette.test.ts"
+      ]
     }
   ]
 }

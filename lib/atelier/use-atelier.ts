@@ -1,0 +1,285 @@
+'use client'
+
+import { useEffect, useReducer, useState } from 'react'
+import { estimateCost } from './cost'
+import { toImageState, toReferenceImage } from './image-file'
+import { extractPalette } from './palette'
+import { DEFAULT_PARAMS, DEFAULT_RECIPE_STATE, type RecipeState } from './params'
+import { createRecipe } from './recipes'
+import { atelierReducer, initialAtelierState } from './reducer'
+import {
+  DEFAULT_PREFS,
+  readJson,
+  readPrefs,
+  readString,
+  STORAGE_KEYS,
+  writeJson,
+  writeString,
+  type Prefs,
+} from './storage'
+import type {
+  AdapterId,
+  KeyKind,
+  PendingTile,
+  GalleryItem,
+  GenerateResponse,
+  GenerationParams,
+  GenerationRequest,
+  Recipe,
+} from '@/lib/types'
+
+const KEY_OF_ADAPTER: Record<AdapterId, KeyKind> = {
+  'nano-banana-2': 'gemini',
+  'gpt-image-2': 'openai',
+}
+
+const KEY_STORAGE: Record<KeyKind, string> = {
+  gemini: STORAGE_KEYS.geminiKey,
+  openai: STORAGE_KEYS.openaiKey,
+  text: STORAGE_KEYS.textKey,
+}
+
+// ponytail: la session gardée en localStorage est plafonnée — les images sont
+// du base64 et le quota du navigateur est de quelques Mo. Passer à IndexedDB
+// si l'historique complet devient nécessaire.
+const MAX_PERSISTED_ITEMS = 12
+
+export interface GenerateOptions {
+  parentId?: string | null
+  /** Modèle imposé — utilisé par le mode A/B, qui lance les deux en parallèle. */
+  adapterId?: AdapterId
+}
+
+/**
+ * État de l'atelier : réglages, session, presets, clés, et l'appel de
+ * génération. Tout vit dans le navigateur ; le seul aller-retour serveur est
+ * `/api/generate`, qui porte la clé de l'utilisateur.
+ */
+export function useAtelier() {
+  const [state, dispatch] = useReducer(atelierReducer, initialAtelierState)
+  const [prompt, setPrompt] = useState('')
+  const [negative, setNegative] = useState('')
+  const [promptSuffix, setPromptSuffix] = useState('')
+  const [params, setParams] = useState<GenerationParams>(DEFAULT_PARAMS)
+  const [recipe, setRecipe] = useState<RecipeState>(DEFAULT_RECIPE_STATE)
+  const [items, setItems] = useState<GalleryItem[]>([])
+  const [pending, setPending] = useState<PendingTile[]>([])
+  const [recipes, setRecipes] = useState<Recipe[]>([])
+  const [activeRecipeId, setActiveRecipeId] = useState<string | null>(null)
+  const [keys, setKeys] = useState<Record<KeyKind, string>>({
+    gemini: '',
+    openai: '',
+    text: '',
+  })
+  const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS)
+  const [onboarded, setOnboarded] = useState(true)
+  const [hydrated, setHydrated] = useState(false)
+
+  const activeRecipe = recipes.find((entry) => entry.id === activeRecipeId) ?? null
+
+  // Relecture du navigateur au montage : aucun appel serveur.
+  useEffect(() => {
+    setKeys({
+      gemini: readString(STORAGE_KEYS.geminiKey),
+      openai: readString(STORAGE_KEYS.openaiKey),
+      text: readString(STORAGE_KEYS.textKey),
+    })
+    setPrefs(readPrefs())
+    setParams(readJson<GenerationParams>(STORAGE_KEYS.params, DEFAULT_PARAMS))
+    setItems(readJson<GalleryItem[]>(STORAGE_KEYS.session, []))
+    setRecipes(readJson<Recipe[]>(STORAGE_KEYS.recipes, []))
+    setOnboarded(readJson<boolean>(STORAGE_KEYS.onboarded, false))
+    setHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (hydrated) writeJson(STORAGE_KEYS.params, params)
+  }, [params, hydrated])
+
+  useEffect(() => {
+    if (hydrated) writeJson(STORAGE_KEYS.session, items.slice(0, MAX_PERSISTED_ITEMS))
+  }, [items, hydrated])
+
+  useEffect(() => {
+    if (hydrated) writeJson(STORAGE_KEYS.prefs, prefs)
+  }, [prefs, hydrated])
+
+  useEffect(() => {
+    if (hydrated) writeJson(STORAGE_KEYS.recipes, recipes)
+  }, [recipes, hydrated])
+
+  useEffect(() => {
+    if (hydrated) writeJson(STORAGE_KEYS.onboarded, onboarded)
+  }, [onboarded, hydrated])
+
+  function setKey(kind: KeyKind, value: string) {
+    setKeys((previous) => ({ ...previous, [kind]: value }))
+    writeString(KEY_STORAGE[kind], value)
+  }
+
+  function applyRecipe(entry: Recipe) {
+    setActiveRecipeId(entry.id)
+    setPromptSuffix(entry.promptSuffix)
+    setParams({ ...DEFAULT_PARAMS, ...entry.params })
+    setRecipe({
+      subjectImages: entry.subjectImages.map(toImageState),
+      subjectWeight: entry.subjectWeight,
+      identityLock: entry.identityLock,
+      styleImages: entry.styleImages.map(toImageState),
+      styleWeight: entry.styleWeight,
+      paletteTransfer: entry.paletteTransfer,
+    })
+  }
+
+  function saveCurrentRecipe(name: string) {
+    const saved = createRecipe({
+      id: crypto.randomUUID(),
+      name,
+      subjectImages: recipe.subjectImages.map(toReferenceImage),
+      subjectWeight: recipe.subjectWeight,
+      styleImages: recipe.styleImages.map(toReferenceImage),
+      styleWeight: recipe.styleWeight,
+      identityLock: recipe.identityLock,
+      paletteTransfer: recipe.paletteTransfer,
+      promptSuffix,
+      negative: negative.trim(),
+      params,
+    })
+
+    setRecipes((previous) => [...previous, saved])
+    setActiveRecipeId(saved.id)
+  }
+
+  function resetParams() {
+    setParams(DEFAULT_PARAMS)
+    setRecipe(DEFAULT_RECIPE_STATE)
+    setPromptSuffix('')
+    setActiveRecipeId(null)
+  }
+
+  function buildRequest(text: string, adapterId: AdapterId = state.adapterId): GenerationRequest {
+    return {
+      adapterId,
+      prompt: text,
+      negative: negative.trim() || undefined,
+      promptSuffix: promptSuffix.trim() || undefined,
+      recipeNegative: activeRecipe?.negative,
+      subjectImages: recipe.subjectImages.map(toReferenceImage),
+      subjectWeight: recipe.subjectWeight,
+      styleImages: recipe.styleImages.map(toReferenceImage),
+      styleWeight: recipe.styleWeight,
+      identityLock: recipe.identityLock,
+      paletteTransfer: recipe.paletteTransfer,
+      params,
+    }
+  }
+
+  /** Ajoute la palette extraite à un item déjà affiché. */
+  function attachPalette(item: GalleryItem) {
+    void extractPalette(
+      `data:${item.result.mimeType};base64,${item.result.imageBase64}`
+    ).then((palette) => {
+      if (!palette) return
+      setItems((previous) =>
+        previous.map((entry) => (entry.id === item.id ? { ...entry, palette } : entry))
+      )
+    })
+  }
+
+  async function generate(
+    fromPrompt: string,
+    options: GenerateOptions = {}
+  ): Promise<GalleryItem[]> {
+    const text = fromPrompt.trim()
+    if (!text) return []
+
+    const adapterId = options.adapterId ?? state.adapterId
+    const tile: PendingTile = { id: crypto.randomUUID(), startedAt: Date.now() }
+    setPending((previous) => [...previous, tile])
+    dispatch({ type: 'setError', error: null })
+
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    const key = keys[KEY_OF_ADAPTER[adapterId]]
+    if (key) headers['x-api-key'] = key
+
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(buildRequest(text, adapterId)),
+      })
+
+      const json: GenerateResponse = await response.json()
+      if (!json.success || !json.data) throw new Error(json.error ?? 'Erreur inconnue')
+
+      const latencyMs = Date.now() - tile.startedAt
+      const created: GalleryItem[] = json.data.map((result) => ({
+        id: crypto.randomUUID(),
+        result,
+        adapterId,
+        prompt: text,
+        negative: negative.trim(),
+        seed: params.seedLock ? params.seed : null,
+        params,
+        palette: null,
+        parentId: options.parentId ?? null,
+        recipeId: activeRecipeId,
+        latencyMs,
+        costEur: estimateCost(adapterId, 1, prefs.pricing),
+        createdAt: new Date().toISOString(),
+      }))
+
+      setItems((previous) => [...created, ...previous])
+      if (created[0]) dispatch({ type: 'select', id: created[0].id })
+
+      // La palette arrive après coup : elle ne doit pas retarder l'affichage.
+      created.forEach(attachPalette)
+
+      return created
+    } catch (error) {
+      dispatch({
+        type: 'setError',
+        error: error instanceof Error ? error.message : 'Erreur inconnue',
+      })
+      return []
+    } finally {
+      setPending((previous) => previous.filter((entry) => entry.id !== tile.id))
+    }
+  }
+
+  return {
+    state,
+    dispatch,
+    prompt,
+    setPrompt,
+    negative,
+    setNegative,
+    promptSuffix,
+    setPromptSuffix,
+    params,
+    setParams,
+    recipe,
+    setRecipe,
+    items,
+    setItems,
+    pending,
+    recipes,
+    setRecipes,
+    activeRecipe,
+    activeRecipeId,
+    applyRecipe,
+    saveCurrentRecipe,
+    resetParams,
+    keys,
+    setKey,
+    hasKeyFor: (adapterId: AdapterId) => keys[KEY_OF_ADAPTER[adapterId]].trim().length > 0,
+    prefs,
+    setPrefs,
+    onboarded,
+    setOnboarded,
+    estimatedCost: estimateCost(state.adapterId, params.batch, prefs.pricing),
+    imageKeyCount: [keys.gemini, keys.openai].filter((key) => key.trim()).length,
+    buildRequest,
+    generate,
+  }
+}
