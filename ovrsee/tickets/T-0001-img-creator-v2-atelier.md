@@ -3,7 +3,7 @@
   "id": "T-0001",
   "type": "epic",
   "titre": "img-creator v2 — Atelier",
-  "colonne": "backlog",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "xl",
   "tags": ["v2", "refonte"],

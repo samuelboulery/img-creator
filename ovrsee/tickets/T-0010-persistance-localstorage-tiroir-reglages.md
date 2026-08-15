@@ -2,7 +2,7 @@
 {
   "id": "T-0010",
   "titre": "Persistance localStorage + tiroir Réglages et clés",
-  "colonne": "backlog",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "m",
   "tags": ["state", "securite"],

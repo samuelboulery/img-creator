@@ -2,7 +2,7 @@
 {
   "id": "T-0011",
   "titre": "Bibliothèque de recettes + export/import .json",
-  "colonne": "backlog",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "m",
   "tags": ["ui", "state"],

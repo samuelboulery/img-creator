@@ -2,7 +2,7 @@
 {
   "id": "T-0017",
   "titre": "Palette ⌘K + écran d'accueil des clés",
-  "colonne": "backlog",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "m",
   "tags": ["ui", "overlays"],

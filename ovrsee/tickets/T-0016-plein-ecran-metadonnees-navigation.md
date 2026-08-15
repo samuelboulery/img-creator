@@ -2,7 +2,7 @@
 {
   "id": "T-0016",
   "titre": "Plein écran : métadonnées, navigation clavier, téléchargement",
-  "colonne": "backlog",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "s",
   "tags": ["ui", "overlays"],

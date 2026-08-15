@@ -2,7 +2,7 @@
 {
   "id": "T-0019",
   "titre": "Responsive < 1100 px, accessibilité, E2E du parcours critique",
-  "colonne": "backlog",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "m",
   "tags": ["a11y", "test"],

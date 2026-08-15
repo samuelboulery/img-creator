@@ -2,7 +2,7 @@
 {
   "id": "T-0014",
   "titre": "Mode Produire : planche contact + export planche",
-  "colonne": "backlog",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "s",
   "tags": ["ui", "modes"],

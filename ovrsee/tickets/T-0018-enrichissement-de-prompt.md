@@ -2,7 +2,7 @@
 {
   "id": "T-0018",
   "titre": "Enrichissement de prompt (/api/enrich, clé utilisateur)",
-  "colonne": "backlog",
+  "colonne": "fait",
   "priorite": "basse",
   "charge": "s",
   "tags": ["api", "securite"],

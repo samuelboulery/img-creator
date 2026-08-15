@@ -2,7 +2,7 @@
 {
   "id": "T-0012",
   "titre": "Extraction de palette + fond ambiant réactif",
-  "colonne": "backlog",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "m",
   "tags": ["ui", "a11y"],

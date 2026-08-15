@@ -168,6 +168,22 @@
         "app/page.tsx",
         "components/atelier/drawers/EnrichDrawer.tsx"
       ]
+    },
+    {
+      "sha": "29c6c43",
+      "date": "2026-08-15",
+      "files": [
+        "app/globals.css",
+        "app/page.tsx",
+        "components/atelier/CanvasHeader.tsx",
+        "components/atelier/overlays/CommandPalette.tsx",
+        "components/atelier/overlays/Onboarding.tsx",
+        "components/atelier/overlays/Viewer.tsx",
+        "e2e/atelier.spec.ts",
+        "lib/atelier/focus-trap.ts",
+        "lib/atelier/reducer.ts",
+        "lib/atelier/use-atelier.ts"
+      ]
     }
   ]
 }

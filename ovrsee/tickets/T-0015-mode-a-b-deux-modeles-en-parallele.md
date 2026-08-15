@@ -2,7 +2,7 @@
 {
   "id": "T-0015",
   "titre": "Mode A/B : deux modèles en parallèle",
-  "colonne": "backlog",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "m",
   "tags": ["ui", "modes", "api"],

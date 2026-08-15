@@ -2,7 +2,7 @@
 {
   "id": "T-0013",
   "titre": "Historique de session (arborescence) + mode Itérer",
-  "colonne": "backlog",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "m",
   "tags": ["ui", "modes"],
