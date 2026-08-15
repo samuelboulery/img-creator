@@ -23,3 +23,12 @@ export function readImageFile(file: File): Promise<ImageState> {
 export function toReferenceImage({ base64, mimeType }: ImageState): ReferenceImage {
   return { base64, mimeType }
 }
+
+/** Reconstruit l'aperçu d'une référence venue d'une recette enregistrée. */
+export function toImageState(image: ReferenceImage): ImageState {
+  return {
+    ...image,
+    id: crypto.randomUUID(),
+    preview: `data:${image.mimeType};base64,${image.base64}`,
+  }
+}

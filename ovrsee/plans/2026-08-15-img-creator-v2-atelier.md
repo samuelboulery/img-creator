@@ -88,6 +88,16 @@
         "lib/types.ts",
         "tests/adapters/payload.test.ts"
       ]
+    },
+    {
+      "sha": "7aa8a9c",
+      "date": "2026-08-15",
+      "files": [
+        "app/page.tsx",
+        "components/atelier/drawers/SettingsDrawer.tsx",
+        "lib/atelier/storage.ts",
+        "tests/atelier/storage.test.ts"
+      ]
     }
   ]
 }

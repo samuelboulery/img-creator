@@ -6,6 +6,7 @@ import Composer from '@/components/atelier/Composer'
 import Drawer from '@/components/atelier/Drawer'
 import ErrorBanner from '@/components/atelier/ErrorBanner'
 import Rail from '@/components/atelier/Rail'
+import RecipesDrawer from '@/components/atelier/drawers/RecipesDrawer'
 import SettingsDrawer, { type KeyKind } from '@/components/atelier/drawers/SettingsDrawer'
 import Explore, { type PendingTile } from '@/components/atelier/modes/Explore'
 import JsonTab from '@/components/atelier/panel/JsonTab'
@@ -15,7 +16,8 @@ import RecipeTab, {
 } from '@/components/atelier/panel/RecipeTab'
 import SettingsPanel from '@/components/atelier/panel/SettingsPanel'
 import { estimateCost } from '@/lib/atelier/cost'
-import { toReferenceImage } from '@/lib/atelier/image-file'
+import { toImageState, toReferenceImage } from '@/lib/atelier/image-file'
+import { createRecipe } from '@/lib/atelier/recipes'
 import { DEFAULT_PARAMS } from '@/lib/atelier/params'
 import { atelierReducer, initialAtelierState, isPanelVisible } from '@/lib/atelier/reducer'
 import {
@@ -34,6 +36,7 @@ import type {
   GenerateResponse,
   GenerationParams,
   GenerationRequest,
+  Recipe,
 } from '@/lib/types'
 
 const DRAWER_TITLES: Record<DrawerId, string> = {
@@ -73,7 +76,12 @@ export default function Home() {
     text: '',
   })
   const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS)
+  const [recipes, setRecipes] = useState<Recipe[]>([])
+  const [activeRecipeId, setActiveRecipeId] = useState<string | null>(null)
+  const [promptSuffix, setPromptSuffix] = useState('')
   const [hydrated, setHydrated] = useState(false)
+
+  const activeRecipe = recipes.find((entry) => entry.id === activeRecipeId) ?? null
 
   // Relecture du navigateur au montage : aucun appel serveur.
   useEffect(() => {
@@ -85,6 +93,7 @@ export default function Home() {
     setPrefs(readPrefs())
     setParams(readJson<GenerationParams>(STORAGE_KEYS.params, DEFAULT_PARAMS))
     setItems(readJson<GalleryItem[]>(STORAGE_KEYS.session, []))
+    setRecipes(readJson<Recipe[]>(STORAGE_KEYS.recipes, []))
     setHydrated(true)
   }, [])
 
@@ -100,6 +109,43 @@ export default function Home() {
     if (hydrated) writeJson(STORAGE_KEYS.prefs, prefs)
   }, [prefs, hydrated])
 
+  useEffect(() => {
+    if (hydrated) writeJson(STORAGE_KEYS.recipes, recipes)
+  }, [recipes, hydrated])
+
+  function applyRecipe(entry: Recipe) {
+    setActiveRecipeId(entry.id)
+    setPromptSuffix(entry.promptSuffix)
+    setParams({ ...DEFAULT_PARAMS, ...entry.params })
+    setRecipe({
+      subjectImages: entry.subjectImages.map(toImageState),
+      subjectWeight: entry.subjectWeight,
+      identityLock: entry.identityLock,
+      styleImages: entry.styleImages.map(toImageState),
+      styleWeight: entry.styleWeight,
+      paletteTransfer: entry.paletteTransfer,
+    })
+  }
+
+  function saveCurrentRecipe(name: string) {
+    const saved = createRecipe({
+      id: crypto.randomUUID(),
+      name,
+      subjectImages: recipe.subjectImages.map(toReferenceImage),
+      subjectWeight: recipe.subjectWeight,
+      styleImages: recipe.styleImages.map(toReferenceImage),
+      styleWeight: recipe.styleWeight,
+      identityLock: recipe.identityLock,
+      paletteTransfer: recipe.paletteTransfer,
+      promptSuffix,
+      negative: negative.trim(),
+      params,
+    })
+
+    setRecipes((previous) => [...previous, saved])
+    setActiveRecipeId(saved.id)
+  }
+
   function setKey(kind: KeyKind, value: string) {
     setKeys((previous) => ({ ...previous, [kind]: value }))
     writeString(KEY_STORAGE[kind], value)
@@ -113,6 +159,8 @@ export default function Home() {
       adapterId: state.adapterId,
       prompt: text,
       negative: negative.trim() || undefined,
+      promptSuffix: promptSuffix.trim() || undefined,
+      recipeNegative: activeRecipe?.negative,
       subjectImages: recipe.subjectImages.map(toReferenceImage),
       subjectWeight: recipe.subjectWeight,
       styleImages: recipe.styleImages.map(toReferenceImage),
@@ -205,9 +253,17 @@ export default function Home() {
                 onPrefsChange={setPrefs}
                 onReviewOnboarding={() => writeJson(STORAGE_KEYS.onboarded, false)}
               />
+            ) : state.openDrawer === 'recipes' ? (
+              <RecipesDrawer
+                recipes={recipes}
+                activeRecipeId={activeRecipeId}
+                onApply={applyRecipe}
+                onSaveCurrent={saveCurrentRecipe}
+                onImport={setRecipes}
+              />
             ) : (
               <p className="text-[12.5px] text-meta">
-                Contenu livré par un ticket dédié (T-0011 à T-0013).
+                Contenu livré par un ticket dédié (T-0013 et T-0018).
               </p>
             )}
           </Drawer>
@@ -254,7 +310,7 @@ export default function Home() {
             negative={negative}
             onPromptChange={setPrompt}
             onNegativeChange={setNegative}
-            presetName={null}
+            presetName={activeRecipe?.name ?? null}
             aspectRatio={params.aspectRatio}
             batch={params.batch}
             estimatedCost={estimatedCost}
@@ -283,7 +339,7 @@ export default function Home() {
                 onRecipeChange={setRecipe}
                 openSections={state.openSections}
                 onToggleSection={(section) => dispatch({ type: 'toggleSection', section })}
-                activeRecipeName={null}
+                activeRecipeName={activeRecipe?.name ?? null}
               />
             ) : (
               <JsonTab request={buildRequest(prompt || '…')} />
