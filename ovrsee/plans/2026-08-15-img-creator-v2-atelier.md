@@ -148,6 +148,17 @@
         "lib/atelier/reducer.ts",
         "lib/atelier/use-atelier.ts"
       ]
+    },
+    {
+      "sha": "7260c10",
+      "date": "2026-08-15",
+      "files": [
+        "app/page.tsx",
+        "components/atelier/overlays/CommandPalette.tsx",
+        "components/atelier/overlays/Onboarding.tsx",
+        "components/atelier/overlays/Viewer.tsx",
+        "lib/atelier/export.ts"
+      ]
     }
   ]
 }

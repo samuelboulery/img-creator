@@ -21,6 +21,7 @@ import Drawer from '@/components/atelier/Drawer'
 import ErrorBanner from '@/components/atelier/ErrorBanner'
 import Rail from '@/components/atelier/Rail'
 import RecipesDrawer from '@/components/atelier/drawers/RecipesDrawer'
+import EnrichDrawer from '@/components/atelier/drawers/EnrichDrawer'
 import HistoryDrawer from '@/components/atelier/drawers/HistoryDrawer'
 import SettingsDrawer from '@/components/atelier/drawers/SettingsDrawer'
 import Compare from '@/components/atelier/modes/Compare'
@@ -227,9 +228,16 @@ export default function Home() {
                 onSelect={(id) => dispatch({ type: 'select', id })}
               />
             ) : (
-              <p className="text-[12.5px] text-meta">
-                Contenu livré par le ticket T-0018.
-              </p>
+              <EnrichDrawer
+                apiKey={atelier.keys.text}
+                onKeyChange={(value) => atelier.setKey('text', value)}
+                prePrompt={prefs.enrichPrePrompt}
+                onPrePromptChange={(value) =>
+                  atelier.setPrefs({ ...prefs, enrichPrePrompt: value })
+                }
+                prompt={atelier.prompt}
+                onUseEnriched={(value) => atelier.setPrompt(value)}
+              />
             )}
           </Drawer>
         )}
