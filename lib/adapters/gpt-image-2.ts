@@ -1,97 +1,131 @@
 import OpenAI, { toFile } from 'openai'
-import type { GenerateImageAdapter, PromptParams, GenerationResult, ReferenceImage } from '@/lib/types'
+import { composePrompt, mergeExtraParams, mergeNegatives } from './shared'
+import type {
+  GenerateImageAdapter,
+  GenerationRequest,
+  GenerationResult,
+  ReferenceImage,
+  Resolution,
+} from '@/lib/types'
 
 const MODEL_ID = 'gpt-image-2'
 
-const OPENAI_EXTRA_KEYS = new Set(['quality', 'size'])
-
-const ASPECT_RATIO_TO_SIZE: Record<string, string> = {
+/** Formats OpenAI, handoff « Mapping API ». */
+const SIZES: Record<string, string> = {
   '1:1': '1024x1024',
-  '16:9': '1536x1024',
-  '9:16': '1024x1536',
-  '4:3': '1536x1024',
-  '3:4': '1024x1536',
+  '16:9': '1536x864',
+  '9:16': '864x1536',
+  '4:3': '1280x960',
 }
 
-type Quality = 'low' | 'medium' | 'high' | 'auto'
+const QUALITIES: Record<Resolution, string> = {
+  '1K': 'low',
+  '2K': 'medium',
+  '4K': 'high',
+}
 
-function buildPrompt(params: PromptParams): string {
-  const parts = [params.positiveText]
+/** Corps exact envoyé au modèle — même fonction pour l'envoi et pour l'onglet JSON. */
+export function buildGptImage2Payload(request: GenerationRequest): object {
+  const { params } = request
+  const negative = mergeNegatives(request.negative, request.recipeNegative)
+  const connector = params.language === 'fr' ? 'À éviter :' : 'Avoid:'
 
-  if (params.negativeText) {
-    parts.push(`Avoid: ${params.negativeText}`)
+  const instructions: string[] = []
+  if (request.identityLock) instructions.push('keep the exact identity of the reference subject')
+  if (request.paletteTransfer) instructions.push('reuse the palette of the style references')
+
+  const suffix = [request.promptSuffix, ...instructions].filter(Boolean).join(', ') || undefined
+
+  const references: ReferenceImage[] = [
+    ...(request.subjectImages ?? []),
+    ...(request.styleImages ?? []),
+  ]
+
+  const payload = {
+    model: MODEL_ID,
+    prompt: composePrompt(request.prompt, suffix, negative, connector),
+    n: params.batch,
+    size: SIZES[params.aspectRatio] ?? '1024x1024',
+    quality: QUALITIES[params.resolution],
+    background: params.transparent ? 'transparent' : 'opaque',
+    output_format: params.fileFormat,
+    // Le PNG n'a pas de compression.
+    output_compression: params.fileFormat === 'png' ? null : params.compression,
+    moderation: params.moderation,
+    image: references.map((image) => image.base64),
   }
 
-  const promptHints = (params.extraParams ?? [])
-    .filter((p) => p.key.trim() && p.value.trim() && !OPENAI_EXTRA_KEYS.has(p.key))
-    .map((p) => `${p.key}: ${p.value}`)
-
-  if (promptHints.length > 0) {
-    parts.push(promptHints.join(', '))
-  }
-
-  return parts.join('. ')
+  return mergeExtraParams(payload, params.extraParams)
 }
 
-function resolveSize(params: PromptParams): string {
-  const sizeOverride = params.extraParams?.find((p) => p.key === 'size')?.value
-  if (sizeOverride) return sizeOverride
-  return ASPECT_RATIO_TO_SIZE[params.aspectRatio ?? '1:1'] ?? '1024x1024'
+type OpenAIPayload = {
+  model: string
+  prompt: string
+  n: number
+  size: string
+  quality: string
+  background: string
+  output_format: string
+  output_compression: number | null
+  moderation: string
+  image: string[]
 }
 
-function resolveQuality(params: PromptParams): Quality {
-  const q = params.extraParams?.find((p) => p.key === 'quality')?.value
-  if (q === 'low' || q === 'medium' || q === 'high' || q === 'auto') return q
-  return 'auto'
-}
-
-async function referenceToFile(img: ReferenceImage, name: string) {
-  const buffer = Buffer.from(img.base64, 'base64')
-  return toFile(buffer, name, { type: img.mimeType })
+async function referenceToFile(image: ReferenceImage, name: string) {
+  return toFile(Buffer.from(image.base64, 'base64'), name, { type: image.mimeType })
 }
 
 export const gptImage2Adapter: GenerateImageAdapter = {
-  async generate(params: PromptParams, apiKeyOverride?: string): Promise<GenerationResult> {
+  async generate(
+    request: GenerationRequest,
+    apiKeyOverride?: string
+  ): Promise<GenerationResult[]> {
     const apiKey = apiKeyOverride ?? process.env.OPENAI_API_KEY
-    if (!apiKey) throw new Error('Aucune clé API OpenAI configurée — renseignez-la dans l\'interface ou dans .env.local')
-
-    const openai = new OpenAI({ apiKey })
-    const prompt = buildPrompt(params)
-    const size = resolveSize(params)
-    const quality = resolveQuality(params)
-
-    const allRefs: ReferenceImage[] = [
-      ...(params.styleImages ?? []),
-      ...(params.subjectImages ?? []),
-    ]
-
-    let b64: string
-
-    if (allRefs.length > 0) {
-      const files = await Promise.all(
-        allRefs.map((img, i) => referenceToFile(img, `ref-${i}.png`))
+    if (!apiKey) {
+      throw new Error(
+        "Aucune clé API OpenAI configurée — renseignez-la dans l'interface ou dans .env.local"
       )
-      const result = await openai.images.edit({
-        model: MODEL_ID,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        image: files as any,
-        prompt,
-        size: size as Parameters<typeof openai.images.edit>[0]['size'],
-        quality: quality as Parameters<typeof openai.images.edit>[0]['quality'],
-      })
-      b64 = result.data?.[0]?.b64_json ?? ''
-    } else {
-      const result = await openai.images.generate({
-        model: MODEL_ID,
-        prompt,
-        size: size as Parameters<typeof openai.images.generate>[0]['size'],
-        quality: quality as Parameters<typeof openai.images.generate>[0]['quality'],
-      })
-      b64 = result.data?.[0]?.b64_json ?? ''
     }
 
-    if (!b64) throw new Error('No image returned from gpt-image-2')
+    const openai = new OpenAI({ apiKey })
+    const payload = buildGptImage2Payload(request) as OpenAIPayload
 
-    return { imageBase64: b64, mimeType: 'image/png' }
+    const references = [...(request.subjectImages ?? []), ...(request.styleImages ?? [])]
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const common: any = {
+      model: payload.model,
+      prompt: payload.prompt,
+      n: payload.n,
+      size: payload.size,
+      quality: payload.quality,
+      output_format: payload.output_format,
+      moderation: payload.moderation,
+      ...(payload.output_compression !== null && {
+        output_compression: payload.output_compression,
+      }),
+      ...(payload.background === 'transparent' && { background: 'transparent' }),
+    }
+
+    const response =
+      references.length > 0
+        ? await openai.images.edit({
+            ...common,
+            image: await Promise.all(
+              references.map((image, index) => referenceToFile(image, `ref-${index}.png`))
+            ),
+          })
+        : await openai.images.generate(common)
+
+    const images: GenerationResult[] = (response.data ?? [])
+      .filter((entry) => entry.b64_json)
+      .map((entry) => ({
+        imageBase64: entry.b64_json as string,
+        mimeType: `image/${payload.output_format}`,
+      }))
+
+    if (images.length === 0) throw new Error('No image returned from gpt-image-2')
+
+    return images
   },
 }

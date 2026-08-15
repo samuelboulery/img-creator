@@ -2,7 +2,7 @@
 {
   "id": "T-0006",
   "titre": "Composer : prompt auto-grow, négatif fusionné, chips, coût, Générer",
-  "colonne": "en-cours",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "m",
   "tags": [

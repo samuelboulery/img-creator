@@ -19,18 +19,73 @@ export type DrawerId = 'history' | 'recipes' | 'enrich' | 'settings'
 /** Onglets du panneau de paramètres. */
 export type PanelTab = 'recipe' | 'json'
 
-export interface PromptParams {
-  adapterId?: AdapterId
-  positiveText: string
-  negativeText?: string
-  styleImages?: ReferenceImage[]
-  /** 0 = loose inspiration, 100 = strict adherence. Default: 50 */
-  styleWeight?: number
+export type AspectRatio = '1:1' | '16:9' | '9:16' | '4:3'
+export type Resolution = '1K' | '2K' | '4K'
+export type Batch = 1 | 2 | 4 | 8
+export type FileFormat = 'png' | 'jpeg' | 'webp'
+export type PersonGeneration = 'allow_adult' | 'allow_all' | 'dont_allow'
+export type Moderation = 'auto' | 'low'
+export type Language = 'auto' | 'fr' | 'en'
+
+/**
+ * Réglages de rendu. Tous les modèles n'en supportent pas la totalité : voir
+ * `lib/adapters/capabilities.ts`, qui décide de ce qui part et de ce qui porte
+ * le badge « ignoré ici ».
+ */
+export interface GenerationParams {
+  aspectRatio: AspectRatio
+  resolution: Resolution
+  batch: Batch
+  /** `null` = graine aléatoire à chaque envoi. */
+  seed: number | null
+  seedLock: boolean
+  fileFormat: FileFormat
+  transparent: boolean
+  /** 20–100, sans effet en PNG. */
+  compression: number
+  /** Guidage (CFG), 1–20 par pas de 0,5. */
+  guidance: number
+  steps: number
+  sampler: string
+  personGeneration: PersonGeneration
+  moderation: Moderation
+  language: Language
+  extraParams: ExtraParam[]
+}
+
+/** Un preset réutilisable : références, poids, suffixe, négatif et réglages. */
+export interface Recipe {
+  id: string
+  name: string
+  styleImages: ReferenceImage[]
+  /** 0 = inspiration lointaine, 100 = reproduction. */
+  styleWeight: number
+  subjectImages: ReferenceImage[]
+  subjectWeight: number
+  identityLock: boolean
+  paletteTransfer: boolean
+  promptSuffix: string
+  negative: string
+  params: Partial<GenerationParams>
+}
+
+/**
+ * Ce qu'un adapter reçoit. Le preset est déjà résolu côté client : seuls son
+ * suffixe et son négatif voyagent, pour être fusionnés puis dédupliqués.
+ */
+export interface GenerationRequest {
+  adapterId: AdapterId
+  prompt: string
+  negative?: string
+  promptSuffix?: string
+  recipeNegative?: string
   subjectImages?: ReferenceImage[]
-  /** 0 = loose inspiration, 100 = strict adherence. Default: 50 */
   subjectWeight?: number
-  aspectRatio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:4'
-  extraParams?: ExtraParam[]
+  styleImages?: ReferenceImage[]
+  styleWeight?: number
+  identityLock?: boolean
+  paletteTransfer?: boolean
+  params: GenerationParams
 }
 
 export interface GenerationResult {
@@ -49,7 +104,7 @@ export interface GalleryItem {
   prompt: string
   negative: string
   seed: number | null
-  aspectRatio: NonNullable<PromptParams['aspectRatio']>
+  params: GenerationParams
   /** Trois couleurs dominantes extraites de l'image — alimente le fond ambiant. */
   palette: [string, string, string] | null
   /** Arborescence de la session : l'image dont celle-ci dérive. */
@@ -61,12 +116,12 @@ export interface GalleryItem {
 }
 
 export interface GenerateImageAdapter {
-  generate(params: PromptParams, apiKeyOverride?: string): Promise<GenerationResult>
+  /** Renvoie autant d'images que `params.batch` en demande. */
+  generate(request: GenerationRequest, apiKeyOverride?: string): Promise<GenerationResult[]>
 }
-
 
 export interface GenerateResponse {
   success: boolean
-  data?: GenerationResult
+  data?: GenerationResult[]
   error?: string
 }

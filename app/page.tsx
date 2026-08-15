@@ -7,14 +7,23 @@ import Drawer from '@/components/atelier/Drawer'
 import ErrorBanner from '@/components/atelier/ErrorBanner'
 import Rail from '@/components/atelier/Rail'
 import Explore, { type PendingTile } from '@/components/atelier/modes/Explore'
+import JsonTab from '@/components/atelier/panel/JsonTab'
+import RecipeTab, {
+  DEFAULT_RECIPE_STATE,
+  type RecipeState,
+} from '@/components/atelier/panel/RecipeTab'
 import SettingsPanel from '@/components/atelier/panel/SettingsPanel'
 import { DEFAULT_PRICING, estimateCost } from '@/lib/atelier/cost'
-import {
-  atelierReducer,
-  initialAtelierState,
-  isPanelVisible,
-} from '@/lib/atelier/reducer'
-import type { DrawerId, GalleryItem, GenerateResponse, PromptParams } from '@/lib/types'
+import { toReferenceImage } from '@/lib/atelier/image-file'
+import { DEFAULT_PARAMS } from '@/lib/atelier/params'
+import { atelierReducer, initialAtelierState, isPanelVisible } from '@/lib/atelier/reducer'
+import type {
+  DrawerId,
+  GalleryItem,
+  GenerateResponse,
+  GenerationParams,
+  GenerationRequest,
+} from '@/lib/types'
 
 const DRAWER_TITLES: Record<DrawerId, string> = {
   history: 'Historique',
@@ -32,13 +41,27 @@ export default function Home() {
   const [state, dispatch] = useReducer(atelierReducer, initialAtelierState)
   const [prompt, setPrompt] = useState('')
   const [negative, setNegative] = useState('')
-  const [aspectRatio, setAspectRatio] =
-    useState<NonNullable<PromptParams['aspectRatio']>>('1:1')
-  const [batch] = useState(1)
+  const [params, setParams] = useState<GenerationParams>(DEFAULT_PARAMS)
+  const [recipe, setRecipe] = useState<RecipeState>(DEFAULT_RECIPE_STATE)
   const [items, setItems] = useState<GalleryItem[]>([])
   const [pending, setPending] = useState<PendingTile[]>([])
 
-  const estimatedCost = estimateCost(state.adapterId, batch, DEFAULT_PRICING)
+  const estimatedCost = estimateCost(state.adapterId, params.batch, DEFAULT_PRICING)
+
+  function buildRequest(text: string): GenerationRequest {
+    return {
+      adapterId: state.adapterId,
+      prompt: text,
+      negative: negative.trim() || undefined,
+      subjectImages: recipe.subjectImages.map(toReferenceImage),
+      subjectWeight: recipe.subjectWeight,
+      styleImages: recipe.styleImages.map(toReferenceImage),
+      styleWeight: recipe.styleWeight,
+      identityLock: recipe.identityLock,
+      paletteTransfer: recipe.paletteTransfer,
+      params,
+    }
+  }
 
   async function generate(fromPrompt: string, parentId: string | null = null) {
     const text = fromPrompt.trim()
@@ -56,35 +79,31 @@ export default function Home() {
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          positiveText: text,
-          negativeText: negative.trim() || undefined,
-          aspectRatio,
-          adapterId: state.adapterId,
-        } satisfies PromptParams),
+        body: JSON.stringify(buildRequest(text)),
       })
 
       const json: GenerateResponse = await response.json()
       if (!json.success || !json.data) throw new Error(json.error ?? 'Erreur inconnue')
 
-      const item: GalleryItem = {
+      const latencyMs = Date.now() - tile.startedAt
+      const created: GalleryItem[] = json.data.map((result) => ({
         id: crypto.randomUUID(),
-        result: json.data,
+        result,
         adapterId: state.adapterId,
         prompt: text,
         negative: negative.trim(),
-        seed: null,
-        aspectRatio,
+        seed: params.seedLock ? params.seed : null,
+        params,
         palette: null,
         parentId,
         recipeId: null,
-        latencyMs: Date.now() - tile.startedAt,
+        latencyMs,
         costEur: estimateCost(state.adapterId, 1, DEFAULT_PRICING),
         createdAt: new Date().toISOString(),
-      }
+      }))
 
-      setItems((previous) => [item, ...previous])
-      dispatch({ type: 'select', id: item.id })
+      setItems((previous) => [...created, ...previous])
+      if (created[0]) dispatch({ type: 'select', id: created[0].id })
     } catch (error) {
       dispatch({
         type: 'setError',
@@ -166,8 +185,8 @@ export default function Home() {
             onPromptChange={setPrompt}
             onNegativeChange={setNegative}
             presetName={null}
-            aspectRatio={aspectRatio}
-            batch={batch}
+            aspectRatio={params.aspectRatio}
+            batch={params.batch}
             estimatedCost={estimatedCost}
             hasEnrichKey={false}
             onEnrich={() => dispatch({ type: 'toggleDrawer', drawer: 'enrich' })}
@@ -179,12 +198,26 @@ export default function Home() {
           <SettingsPanel
             tab={state.panelTab}
             onTabChange={(tab) => dispatch({ type: 'setPanelTab', tab })}
-            onReset={() => setAspectRatio('1:1')}
+            onReset={() => {
+              setParams(DEFAULT_PARAMS)
+              setRecipe(DEFAULT_RECIPE_STATE)
+            }}
             keysSummary="ce navigateur"
           >
-            <p className="text-[12.5px] text-meta">
-              Réglages livrés par les tickets T-0007 et T-0009.
-            </p>
+            {state.panelTab === 'recipe' ? (
+              <RecipeTab
+                adapterId={state.adapterId}
+                params={params}
+                onParamsChange={setParams}
+                recipe={recipe}
+                onRecipeChange={setRecipe}
+                openSections={state.openSections}
+                onToggleSection={(section) => dispatch({ type: 'toggleSection', section })}
+                activeRecipeName={null}
+              />
+            ) : (
+              <JsonTab request={buildRequest(prompt || '…')} />
+            )}
           </SettingsPanel>
         )}
       </div>

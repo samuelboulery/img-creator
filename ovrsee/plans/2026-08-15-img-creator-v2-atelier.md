@@ -41,6 +41,25 @@
         "tests/setup.ts",
         "vitest.config.ts"
       ]
+    },
+    {
+      "sha": "5ca4cca",
+      "date": "2026-08-15",
+      "files": [
+        "app/globals.css",
+        "app/page.tsx",
+        "components/atelier/CanvasHeader.tsx",
+        "components/atelier/Composer.tsx",
+        "components/atelier/Drawer.tsx",
+        "components/atelier/ErrorBanner.tsx",
+        "components/atelier/Rail.tsx",
+        "components/atelier/modes/Explore.tsx",
+        "components/atelier/panel/SettingsPanel.tsx",
+        "lib/atelier/cost.ts",
+        "lib/atelier/reducer.ts",
+        "lib/types.ts",
+        "tests/atelier/reducer.test.ts"
+      ]
     }
   ]
 }
