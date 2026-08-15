@@ -98,6 +98,17 @@
         "lib/atelier/storage.ts",
         "tests/atelier/storage.test.ts"
       ]
+    },
+    {
+      "sha": "991e306",
+      "date": "2026-08-15",
+      "files": [
+        "app/page.tsx",
+        "components/atelier/drawers/RecipesDrawer.tsx",
+        "lib/atelier/image-file.ts",
+        "lib/atelier/recipes.ts",
+        "tests/atelier/recipes.test.ts"
+      ]
     }
   ]
 }

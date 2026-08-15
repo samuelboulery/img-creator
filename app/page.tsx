@@ -15,7 +15,9 @@ import RecipeTab, {
   type RecipeState,
 } from '@/components/atelier/panel/RecipeTab'
 import SettingsPanel from '@/components/atelier/panel/SettingsPanel'
+import AmbientBackground from '@/components/atelier/AmbientBackground'
 import { estimateCost } from '@/lib/atelier/cost'
+import { extractPalette } from '@/lib/atelier/palette'
 import { toImageState, toReferenceImage } from '@/lib/atelier/image-file'
 import { createRecipe } from '@/lib/atelier/recipes'
 import { DEFAULT_PARAMS } from '@/lib/atelier/params'
@@ -212,6 +214,18 @@ export default function Home() {
 
       setItems((previous) => [...created, ...previous])
       if (created[0]) dispatch({ type: 'select', id: created[0].id })
+
+      // La palette arrive après coup : elle ne doit pas retarder l'affichage.
+      for (const item of created) {
+        void extractPalette(
+          `data:${item.result.mimeType};base64,${item.result.imageBase64}`
+        ).then((palette) => {
+          if (!palette) return
+          setItems((previous) =>
+            previous.map((entry) => (entry.id === item.id ? { ...entry, palette } : entry))
+          )
+        })
+      }
     } catch (error) {
       dispatch({
         type: 'setError',
@@ -229,6 +243,14 @@ export default function Home() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden">
+      <AmbientBackground
+        layers={items
+          .filter((item) => item.palette)
+          .map((item) => ({ id: item.id, palette: item.palette! }))}
+        selectedId={state.selectedId}
+        enabled={prefs.ambientEnabled}
+      />
+
       <div className="relative flex h-full gap-[10px] p-[10px]">
         <Rail
           mode={state.mode}
