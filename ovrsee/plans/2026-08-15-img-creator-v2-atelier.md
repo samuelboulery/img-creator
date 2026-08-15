@@ -119,6 +119,23 @@
         "lib/atelier/palette.ts",
         "tests/atelier/palette.test.ts"
       ]
+    },
+    {
+      "sha": "35cc4a6",
+      "date": "2026-08-15",
+      "files": [
+        "app/page.tsx",
+        "components/atelier/drawers/HistoryDrawer.tsx",
+        "components/atelier/drawers/SettingsDrawer.tsx",
+        "components/atelier/modes/Explore.tsx",
+        "components/atelier/modes/Iterate.tsx",
+        "components/atelier/panel/RecipeTab.tsx",
+        "lib/atelier/diff.ts",
+        "lib/atelier/params.ts",
+        "lib/atelier/use-atelier.ts",
+        "lib/types.ts",
+        "tests/atelier/diff.test.ts"
+      ]
     }
   ]
 }

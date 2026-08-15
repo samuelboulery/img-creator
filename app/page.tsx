@@ -9,11 +9,14 @@ import Rail from '@/components/atelier/Rail'
 import RecipesDrawer from '@/components/atelier/drawers/RecipesDrawer'
 import HistoryDrawer from '@/components/atelier/drawers/HistoryDrawer'
 import SettingsDrawer from '@/components/atelier/drawers/SettingsDrawer'
+import Compare from '@/components/atelier/modes/Compare'
 import Explore from '@/components/atelier/modes/Explore'
 import Iterate from '@/components/atelier/modes/Iterate'
+import Produce from '@/components/atelier/modes/Produce'
 import JsonTab from '@/components/atelier/panel/JsonTab'
 import RecipeTab from '@/components/atelier/panel/RecipeTab'
 import SettingsPanel from '@/components/atelier/panel/SettingsPanel'
+import { exportSheet } from '@/lib/atelier/export'
 import { isPanelVisible } from '@/lib/atelier/reducer'
 import { STORAGE_KEYS, writeJson } from '@/lib/atelier/storage'
 import { useAtelier } from '@/lib/atelier/use-atelier'
@@ -53,7 +56,10 @@ export default function Home() {
           usageEur={items.reduce((total, item) => total + item.costEur, 0)}
           onNewGeneration={() => dispatch({ type: 'closeDrawer' })}
           onToggleDrawer={(drawer) => dispatch({ type: 'toggleDrawer', drawer })}
-          onCompare={() => dispatch({ type: 'setMode', mode: 'ab' })}
+          onCompare={() => {
+            dispatch({ type: 'setMode', mode: 'ab' })
+            dispatch({ type: 'closeDrawer' })
+          }}
         />
 
         {state.openDrawer && (
@@ -120,10 +126,37 @@ export default function Home() {
                 selectedId={state.selectedId}
                 onSelect={(id) => dispatch({ type: 'select', id })}
               />
+            ) : state.mode === 'produce' ? (
+              <Produce
+                items={items}
+                selection={state.sheetSelection}
+                onToggle={(id) => dispatch({ type: 'toggleSheet', id })}
+                onSelectAll={() =>
+                  dispatch({
+                    type: 'selectSheet',
+                    ids: items.slice(0, 8).map((item) => item.id),
+                  })
+                }
+                onExport={() =>
+                  exportSheet(items.filter((item) => state.sheetSelection.includes(item.id)))
+                }
+              />
             ) : (
-              <div className="flex h-full items-center justify-center rounded-rail border border-dashed border-dash text-[12.5px] text-meta">
-                Mode livré par un ticket dédié (T-0014 et T-0015).
-              </div>
+              <Compare
+                ab={atelier.ab}
+                onKeep={(item) => {
+                  dispatch({ type: 'setAdapter', adapterId: item.adapterId })
+                  dispatch({ type: 'select', id: item.id })
+                  dispatch({ type: 'setMode', mode: 'explore' })
+                }}
+                onDecline={(item) =>
+                  void atelier.generate(item.prompt, {
+                    parentId: item.id,
+                    adapterId: item.adapterId,
+                  })
+                }
+                onRerun={() => void atelier.compare(atelier.prompt)}
+              />
             )}
           </div>
 
@@ -146,7 +179,11 @@ export default function Home() {
             estimatedCost={atelier.estimatedCost}
             hasEnrichKey={atelier.keys.text.trim().length > 0}
             onEnrich={() => dispatch({ type: 'toggleDrawer', drawer: 'enrich' })}
-            onSubmit={() => void atelier.generate(atelier.prompt)}
+            onSubmit={() =>
+              state.mode === 'ab'
+                ? void atelier.compare(atelier.prompt)
+                : void atelier.generate(atelier.prompt)
+            }
           />
         </main>
 

@@ -44,6 +44,15 @@ const KEY_STORAGE: Record<KeyKind, string> = {
 // si l'historique complet devient nécessaire.
 const MAX_PERSISTED_ITEMS = 12
 
+/** Résultat courant du mode A/B, une colonne par modèle. */
+export interface AbState {
+  a: GalleryItem | null
+  b: GalleryItem | null
+  errorA: string | null
+  errorB: string | null
+  running: boolean
+}
+
 export interface GenerateOptions {
   parentId?: string | null
   /** Modèle imposé — utilisé par le mode A/B, qui lance les deux en parallèle. */
@@ -73,6 +82,13 @@ export function useAtelier() {
   })
   const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS)
   const [onboarded, setOnboarded] = useState(true)
+  const [ab, setAb] = useState<AbState>({
+    a: null,
+    b: null,
+    errorA: null,
+    errorB: null,
+    running: false,
+  })
   const [hydrated, setHydrated] = useState(false)
 
   const activeRecipe = recipes.find((entry) => entry.id === activeRecipeId) ?? null
@@ -157,6 +173,10 @@ export function useAtelier() {
     setActiveRecipeId(null)
   }
 
+  function hasKeyFor(adapterId: AdapterId): boolean {
+    return keys[KEY_OF_ADAPTER[adapterId]].trim().length > 0
+  }
+
   function buildRequest(text: string, adapterId: AdapterId = state.adapterId): GenerationRequest {
     return {
       adapterId,
@@ -186,17 +206,19 @@ export function useAtelier() {
     })
   }
 
-  async function generate(
-    fromPrompt: string,
-    options: GenerateOptions = {}
-  ): Promise<GalleryItem[]> {
-    const text = fromPrompt.trim()
-    if (!text) return []
+  interface RunResult {
+    created: GalleryItem[]
+    error: string | null
+  }
 
-    const adapterId = options.adapterId ?? state.adapterId
+  /** Un appel de génération, sans décider où va l'erreur : l'appelant s'en charge. */
+  async function runGeneration(
+    text: string,
+    adapterId: AdapterId,
+    parentId: string | null
+  ): Promise<RunResult> {
     const tile: PendingTile = { id: crypto.randomUUID(), startedAt: Date.now() }
     setPending((previous) => [...previous, tile])
-    dispatch({ type: 'setError', error: null })
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
     const key = keys[KEY_OF_ADAPTER[adapterId]]
@@ -222,7 +244,7 @@ export function useAtelier() {
         seed: params.seedLock ? params.seed : null,
         params,
         palette: null,
-        parentId: options.parentId ?? null,
+        parentId,
         recipeId: activeRecipeId,
         latencyMs,
         costEur: estimateCost(adapterId, 1, prefs.pricing),
@@ -230,21 +252,64 @@ export function useAtelier() {
       }))
 
       setItems((previous) => [...created, ...previous])
-      if (created[0]) dispatch({ type: 'select', id: created[0].id })
 
       // La palette arrive après coup : elle ne doit pas retarder l'affichage.
       created.forEach(attachPalette)
 
-      return created
+      return { created, error: null }
     } catch (error) {
-      dispatch({
-        type: 'setError',
+      return {
+        created: [],
         error: error instanceof Error ? error.message : 'Erreur inconnue',
-      })
-      return []
+      }
     } finally {
       setPending((previous) => previous.filter((entry) => entry.id !== tile.id))
     }
+  }
+
+  async function generate(
+    fromPrompt: string,
+    options: GenerateOptions = {}
+  ): Promise<GalleryItem[]> {
+    const text = fromPrompt.trim()
+    if (!text) return []
+
+    dispatch({ type: 'setError', error: null })
+    const { created, error } = await runGeneration(
+      text,
+      options.adapterId ?? state.adapterId,
+      options.parentId ?? null
+    )
+
+    if (error) dispatch({ type: 'setError', error })
+    else if (created[0]) dispatch({ type: 'select', id: created[0].id })
+
+    return created
+  }
+
+  /** Mode A/B : les deux modèles partent en parallèle, chacun avec sa clé. */
+  async function compare(fromPrompt: string) {
+    const text = fromPrompt.trim()
+    if (!text) return
+
+    setAb({ a: null, b: null, errorA: null, errorB: null, running: true })
+
+    const [first, second] = await Promise.all([
+      hasKeyFor('nano-banana-2')
+        ? runGeneration(text, 'nano-banana-2', null)
+        : Promise.resolve({ created: [], error: 'Aucune clé Google AI Studio enregistrée' }),
+      hasKeyFor('gpt-image-2')
+        ? runGeneration(text, 'gpt-image-2', null)
+        : Promise.resolve({ created: [], error: 'Aucune clé OpenAI enregistrée' }),
+    ])
+
+    setAb({
+      a: first.created[0] ?? null,
+      b: second.created[0] ?? null,
+      errorA: first.error,
+      errorB: second.error,
+      running: false,
+    })
   }
 
   return {
@@ -272,7 +337,7 @@ export function useAtelier() {
     resetParams,
     keys,
     setKey,
-    hasKeyFor: (adapterId: AdapterId) => keys[KEY_OF_ADAPTER[adapterId]].trim().length > 0,
+    hasKeyFor,
     prefs,
     setPrefs,
     onboarded,
@@ -281,5 +346,7 @@ export function useAtelier() {
     imageKeyCount: [keys.gemini, keys.openai].filter((key) => key.trim()).length,
     buildRequest,
     generate,
+    ab,
+    compare,
   }
 }

@@ -14,6 +14,8 @@ export interface AtelierState {
   viewerOpen: boolean
   cmdOpen: boolean
   error: string | null
+  /** Cases cochées de la planche contact (mode Produire). */
+  sheetSelection: string[]
 }
 
 export const DEFAULT_OPEN_SECTIONS: Record<string, boolean> = {
@@ -34,6 +36,7 @@ export const initialAtelierState: AtelierState = {
   viewerOpen: false,
   cmdOpen: false,
   error: null,
+  sheetSelection: [],
 }
 
 export type AtelierAction =
@@ -50,6 +53,8 @@ export type AtelierAction =
   | { type: 'toggleCmd' }
   | { type: 'closeOverlays' }
   | { type: 'setError'; error: string | null }
+  | { type: 'toggleSheet'; id: string }
+  | { type: 'selectSheet'; ids: string[] }
 
 const OTHER_ADAPTER: Record<AdapterId, AdapterId> = {
   'nano-banana-2': 'gpt-image-2',
@@ -107,6 +112,17 @@ export function atelierReducer(state: AtelierState, action: AtelierAction): Atel
 
     case 'setError':
       return { ...state, error: action.error }
+
+    case 'toggleSheet':
+      return {
+        ...state,
+        sheetSelection: state.sheetSelection.includes(action.id)
+          ? state.sheetSelection.filter((id) => id !== action.id)
+          : [...state.sheetSelection, action.id],
+      }
+
+    case 'selectSheet':
+      return { ...state, sheetSelection: action.ids }
   }
 }
 
