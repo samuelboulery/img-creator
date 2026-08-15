@@ -1,0 +1,22 @@
+{
+  "date": "2026-08-15",
+  "commit": "14c4ccf",
+  "pages": [
+    {
+      "route": "/",
+      "slug": "accueil",
+      "title": "img-creator",
+      "sample": "/",
+      "excerpt": "img-creator\nNano Banana 2\nGPT Image 2\nClé API Gemini\n👁\nOK\n\nUtilisée si aucune clé n'est définie dans .env.local\n\nPrompt positif *\nPrompt négatif\nRéférences de style\n▼\nRéférences de sujet\n▼\nParamètres avancés\n▼\nFormat\n1:1\n16:9\n9:16\n4:3\n3:4\nGénérer\nRésultats\nLes images générées apparaîtront ici",
+      "links": [],
+      "shot": "shots/accueil/2026-08-15-14c4ccf.png",
+      "shotDate": "2026-08-15",
+      "shotSize": {
+        "width": 1280,
+        "height": 800
+      }
+    }
+  ],
+  "redirects": {},
+  "orphanShots": []
+}
