@@ -25,6 +25,22 @@
       "files": [
         "ovrsee.config.json"
       ]
+    },
+    {
+      "sha": "a41a8bc",
+      "date": "2026-08-15",
+      "files": [
+        ".gitignore",
+        "app/globals.css",
+        "app/layout.tsx",
+        "e2e/smoke.spec.ts",
+        "package.json",
+        "playwright.config.ts",
+        "pnpm-lock.yaml",
+        "tests/setup.test.tsx",
+        "tests/setup.ts",
+        "vitest.config.ts"
+      ]
     }
   ]
 }

@@ -2,7 +2,7 @@
 {
   "id": "T-0004",
   "titre": "Shell, rail 78 px, en-tête de canvas, mécanique des tiroirs",
-  "colonne": "pret",
+  "colonne": "en-cours",
   "priorite": "haute",
   "charge": "m",
   "tags": [

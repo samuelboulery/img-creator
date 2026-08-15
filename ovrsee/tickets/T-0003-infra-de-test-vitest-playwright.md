@@ -2,7 +2,7 @@
 {
   "id": "T-0003",
   "titre": "Infra de test : Vitest + Playwright",
-  "colonne": "en-cours",
+  "colonne": "fait",
   "priorite": "moyenne",
   "charge": "s",
   "tags": [

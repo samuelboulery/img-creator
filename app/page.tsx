@@ -1,130 +1,193 @@
 'use client'
 
-import { useState } from 'react'
-import PromptForm from '@/components/PromptForm'
-import ImageGallery, { type GalleryItem } from '@/components/ImageGallery'
-import ApiKeyInput from '@/components/ApiKeyInput'
-import type { AdapterId, PromptParams, GenerateResponse } from '@/lib/types'
+import { useReducer, useState } from 'react'
+import CanvasHeader from '@/components/atelier/CanvasHeader'
+import Composer from '@/components/atelier/Composer'
+import Drawer from '@/components/atelier/Drawer'
+import ErrorBanner from '@/components/atelier/ErrorBanner'
+import Rail from '@/components/atelier/Rail'
+import Explore, { type PendingTile } from '@/components/atelier/modes/Explore'
+import SettingsPanel from '@/components/atelier/panel/SettingsPanel'
+import { DEFAULT_PRICING, estimateCost } from '@/lib/atelier/cost'
+import {
+  atelierReducer,
+  initialAtelierState,
+  isPanelVisible,
+} from '@/lib/atelier/reducer'
+import type { DrawerId, GalleryItem, GenerateResponse, PromptParams } from '@/lib/types'
 
-const ADAPTERS: { id: AdapterId; label: string; storageKey: string; placeholder: string; apiKeyLabel: string }[] = [
-  {
-    id: 'nano-banana-2',
-    label: 'Nano Banana 2',
-    storageKey: 'gemini_api_key',
-    placeholder: 'AIza…',
-    apiKeyLabel: 'Clé API Gemini',
-  },
-  {
-    id: 'gpt-image-2',
-    label: 'GPT Image 2',
-    storageKey: 'openai_api_key',
-    placeholder: 'sk-…',
-    apiKeyLabel: 'Clé API OpenAI',
-  },
-]
+const DRAWER_TITLES: Record<DrawerId, string> = {
+  history: 'Historique',
+  recipes: 'Bibliothèque de recettes',
+  enrich: 'Enrichissement du prompt',
+  settings: 'Réglages',
+}
+
+const KEY_STORAGE: Record<string, string> = {
+  'nano-banana-2': 'gemini_api_key',
+  'gpt-image-2': 'openai_api_key',
+}
 
 export default function Home() {
+  const [state, dispatch] = useReducer(atelierReducer, initialAtelierState)
+  const [prompt, setPrompt] = useState('')
+  const [negative, setNegative] = useState('')
+  const [aspectRatio, setAspectRatio] =
+    useState<NonNullable<PromptParams['aspectRatio']>>('1:1')
+  const [batch] = useState(1)
   const [items, setItems] = useState<GalleryItem[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedAdapter, setSelectedAdapter] = useState<AdapterId>('nano-banana-2')
-  const [geminiKey, setGeminiKey] = useState('')
-  const [openaiKey, setOpenaiKey] = useState('')
+  const [pending, setPending] = useState<PendingTile[]>([])
 
-  const activeKey = selectedAdapter === 'gpt-image-2' ? openaiKey : geminiKey
+  const estimatedCost = estimateCost(state.adapterId, batch, DEFAULT_PRICING)
 
-  async function handleGenerate(params: PromptParams) {
-    setLoading(true)
-    setError(null)
+  async function generate(fromPrompt: string, parentId: string | null = null) {
+    const text = fromPrompt.trim()
+    if (!text) return
+
+    const tile: PendingTile = { id: crypto.randomUUID(), startedAt: Date.now() }
+    setPending((previous) => [...previous, tile])
+    dispatch({ type: 'setError', error: null })
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-    if (activeKey) headers['x-api-key'] = activeKey
+    const key = window.localStorage.getItem(KEY_STORAGE[state.adapterId])
+    if (key) headers['x-api-key'] = key
 
     try {
-      const res = await fetch('/api/generate', {
+      const response = await fetch('/api/generate', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ ...params, adapterId: selectedAdapter }),
+        body: JSON.stringify({
+          positiveText: text,
+          negativeText: negative.trim() || undefined,
+          aspectRatio,
+          adapterId: state.adapterId,
+        } satisfies PromptParams),
       })
 
-      const json: GenerateResponse = await res.json()
+      const json: GenerateResponse = await response.json()
+      if (!json.success || !json.data) throw new Error(json.error ?? 'Erreur inconnue')
 
-      if (!json.success || !json.data) {
-        throw new Error(json.error ?? 'Erreur inconnue')
-      }
-
-      const newItem: GalleryItem = {
+      const item: GalleryItem = {
         id: crypto.randomUUID(),
         result: json.data,
-        prompt: params.positiveText,
-        createdAt: new Date(),
+        adapterId: state.adapterId,
+        prompt: text,
+        negative: negative.trim(),
+        seed: null,
+        aspectRatio,
+        palette: null,
+        parentId,
+        recipeId: null,
+        latencyMs: Date.now() - tile.startedAt,
+        costEur: estimateCost(state.adapterId, 1, DEFAULT_PRICING),
+        createdAt: new Date().toISOString(),
       }
 
-      setItems((prev) => [newItem, ...prev])
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue')
+      setItems((previous) => [item, ...previous])
+      dispatch({ type: 'select', id: item.id })
+    } catch (error) {
+      dispatch({
+        type: 'setError',
+        error: error instanceof Error ? error.message : 'Erreur inconnue',
+      })
     } finally {
-      setLoading(false)
+      setPending((previous) => previous.filter((entry) => entry.id !== tile.id))
     }
   }
 
-  const adapter = ADAPTERS.find((a) => a.id === selectedAdapter)!
+  const counterLabel =
+    items.length > 0
+      ? `${items.length} variante${items.length > 1 ? 's' : ''} · session locale`
+      : 'session locale'
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
-      <header className="border-b border-gray-800 px-6 py-3 flex items-center justify-between gap-4">
-        <h1 className="text-lg font-semibold tracking-tight shrink-0">img-creator</h1>
-        <div className="flex items-center gap-1 bg-gray-900 border border-gray-700 rounded-lg p-0.5">
-          {ADAPTERS.map((a) => (
-            <button
-              key={a.id}
-              onClick={() => setSelectedAdapter(a.id)}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                selectedAdapter === a.id
-                  ? 'bg-violet-600 text-white'
-                  : 'text-gray-400 hover:text-gray-200'
-              }`}
-            >
-              {a.label}
-            </button>
-          ))}
-        </div>
-      </header>
+    <div className="relative h-screen w-screen overflow-hidden">
+      <div className="relative flex h-full gap-[10px] p-[10px]">
+        <Rail
+          mode={state.mode}
+          openDrawer={state.openDrawer}
+          usagePercent={0}
+          usageEur={items.reduce((total, item) => total + item.costEur, 0)}
+          onNewGeneration={() => dispatch({ type: 'closeDrawer' })}
+          onToggleDrawer={(drawer) => dispatch({ type: 'toggleDrawer', drawer })}
+          onCompare={() => dispatch({ type: 'setMode', mode: 'ab' })}
+        />
 
-      <main className="max-w-6xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-8">
-        <div className="space-y-4">
-          <ApiKeyInput
-            key={adapter.id}
-            label={adapter.apiKeyLabel}
-            storageKey={adapter.storageKey}
-            placeholder={adapter.placeholder}
-            onChange={adapter.id === 'gpt-image-2' ? setOpenaiKey : setGeminiKey}
-          />
-          <PromptForm onSubmit={handleGenerate} loading={loading} />
-          {error && (
-            <p className="rounded-lg bg-red-900/40 border border-red-700 text-red-300 text-sm px-3 py-2">
-              {error}
+        {state.openDrawer && (
+          <Drawer
+            title={DRAWER_TITLES[state.openDrawer]}
+            onClose={() => dispatch({ type: 'closeDrawer' })}
+          >
+            <p className="text-[12.5px] text-meta">
+              Contenu livré par un ticket dédié (T-0010 à T-0013).
             </p>
-          )}
-        </div>
+          </Drawer>
+        )}
 
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-medium text-gray-400">
-              {items.length > 0 ? `${items.length} image${items.length > 1 ? 's' : ''}` : 'Résultats'}
-            </h2>
-            {items.length > 0 && (
-              <button
-                onClick={() => setItems([])}
-                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-              >
-                Tout effacer
-              </button>
+        <main className="flex min-w-canvas-min flex-1 flex-col gap-[13px] overflow-hidden rounded-panel border border-line bg-canvas/62 p-[10px] backdrop-blur-[28px]">
+          <CanvasHeader
+            sessionTitle="Session"
+            counterLabel={counterLabel}
+            mode={state.mode}
+            adapterId={state.adapterId}
+            onModeChange={(mode) => dispatch({ type: 'setMode', mode })}
+            onToggleAdapter={() => dispatch({ type: 'toggleAdapter' })}
+            onOpenCommandPalette={() => dispatch({ type: 'toggleCmd' })}
+          />
+
+          <div className="min-h-0 flex-1">
+            {state.mode === 'explore' ? (
+              <Explore
+                items={items}
+                pending={pending}
+                selectedId={state.selectedId}
+                onSelect={(id) => dispatch({ type: 'select', id })}
+                onEnlarge={() => dispatch({ type: 'openViewer' })}
+                onDecline={(item) => generate(item.prompt, item.id)}
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center rounded-rail border border-dashed border-dash text-[12.5px] text-meta">
+                Mode livré par un ticket dédié (T-0013 à T-0015).
+              </div>
             )}
           </div>
-          <ImageGallery items={items} />
-        </div>
-      </main>
+
+          {state.error && (
+            <ErrorBanner
+              message={state.error}
+              onRetry={() => generate(prompt)}
+              onDismiss={() => dispatch({ type: 'setError', error: null })}
+            />
+          )}
+
+          <Composer
+            prompt={prompt}
+            negative={negative}
+            onPromptChange={setPrompt}
+            onNegativeChange={setNegative}
+            presetName={null}
+            aspectRatio={aspectRatio}
+            batch={batch}
+            estimatedCost={estimatedCost}
+            hasEnrichKey={false}
+            onEnrich={() => dispatch({ type: 'toggleDrawer', drawer: 'enrich' })}
+            onSubmit={() => generate(prompt)}
+          />
+        </main>
+
+        {isPanelVisible(state) && (
+          <SettingsPanel
+            tab={state.panelTab}
+            onTabChange={(tab) => dispatch({ type: 'setPanelTab', tab })}
+            onReset={() => setAspectRatio('1:1')}
+            keysSummary="ce navigateur"
+          >
+            <p className="text-[12.5px] text-meta">
+              Réglages livrés par les tickets T-0007 et T-0009.
+            </p>
+          </SettingsPanel>
+        )}
+      </div>
     </div>
   )
 }

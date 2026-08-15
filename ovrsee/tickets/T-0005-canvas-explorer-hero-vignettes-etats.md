@@ -2,7 +2,7 @@
 {
   "id": "T-0005",
   "titre": "Canvas Explorer : hero, vignettes, tuile en cours, états vide et erreur",
-  "colonne": "pret",
+  "colonne": "en-cours",
   "priorite": "haute",
   "charge": "m",
   "tags": [

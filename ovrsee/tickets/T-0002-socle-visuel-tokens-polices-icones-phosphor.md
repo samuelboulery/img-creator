@@ -2,7 +2,7 @@
 {
   "id": "T-0002",
   "titre": "Socle visuel : tokens, polices, icônes Phosphor",
-  "colonne": "en-cours",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "s",
   "tags": [
