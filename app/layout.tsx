@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Space_Grotesk, IBM_Plex_Mono } from 'next/font/google'
 import './globals.css'
 
@@ -14,9 +14,38 @@ const plexMono = IBM_Plex_Mono({
   subsets: ['latin'],
 })
 
+const title = 'img-creator — Atelier'
+const description =
+  "Atelier de génération d'images multi-modèles : un prompt, deux API (nano-banana-2, gpt-image-2), trois modes de travail et une comparaison A/B. Sans compte ni base de données — tout reste dans le navigateur."
+
 export const metadata: Metadata = {
-  title: 'img-creator — Atelier',
-  description: "Atelier de génération d'images multi-modèles",
+  metadataBase: new URL('https://img-generator-app.netlify.app'),
+  title: { default: title, template: '%s — img-creator' },
+  description,
+  applicationName: 'img-creator',
+  keywords: [
+    "génération d'images",
+    'IA',
+    'nano-banana-2',
+    'gpt-image-2',
+    'prompt',
+    'atelier',
+  ],
+  openGraph: {
+    type: 'website',
+    locale: 'fr_FR',
+    siteName: 'img-creator',
+    url: '/',
+    title,
+    description,
+  },
+  twitter: { card: 'summary_large_image', title, description },
+  robots: { index: true, follow: true },
+}
+
+export const viewport: Viewport = {
+  colorScheme: 'dark',
+  themeColor: '#08090d',
 }
 
 export default function RootLayout({
