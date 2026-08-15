@@ -2,7 +2,7 @@
 {
   "id": "T-0008",
   "titre": "Adapters v2 : buildPayload pur, capacités par modèle, variantes, graine",
-  "colonne": "en-cours",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "l",
   "tags": [

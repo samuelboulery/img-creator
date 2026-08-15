@@ -1,0 +1,87 @@
+import { DEFAULT_PRICING, type Pricing } from './cost'
+
+/**
+ * L'app n'a ni serveur ni base : localStorage est la seule persistance.
+ * Les clés API restent dans le navigateur et ne partent qu'en en-tête
+ * `x-api-key` vers `/app/api`.
+ */
+export const STORAGE_KEYS = {
+  geminiKey: 'gemini_api_key',
+  openaiKey: 'openai_api_key',
+  textKey: 'text_api_key',
+  recipes: 'imgc.recipes',
+  session: 'imgc.session',
+  params: 'imgc.params',
+  prefs: 'imgc.prefs',
+  onboarded: 'imgc.onboarded',
+} as const
+
+export const ENRICH_PRE_PROMPT = `Tu es directeur artistique. Réécris le prompt de l'utilisateur pour un modèle texte-vers-image.
+Conserve son intention et son sujet exactement — n'invente aucun élément nouveau.
+Précise ce qui est implicite : cadrage, focale, source et qualité de lumière, matière, arrière-plan, palette, heure.
+Une seule phrase dense, sans liste, sans adjectif publicitaire, sans mention de marque ni de style d'artiste vivant.
+Renvoie uniquement le prompt réécrit.`
+
+export interface Prefs {
+  ambientEnabled: boolean
+  pricing: Pricing
+  enrichPrePrompt: string
+}
+
+export const DEFAULT_PREFS: Prefs = {
+  ambientEnabled: true,
+  pricing: DEFAULT_PRICING,
+  enrichPrePrompt: ENRICH_PRE_PROMPT,
+}
+
+function storage(): Storage | null {
+  // Rendu serveur, ou navigateur qui refuse le stockage (mode privé strict).
+  try {
+    return typeof window === 'undefined' ? null : window.localStorage
+  } catch {
+    return null
+  }
+}
+
+/** Une entrée illisible vaut une entrée absente : on retombe sur la valeur par défaut. */
+export function readJson<T>(key: string, fallback: T): T {
+  const raw = storage()?.getItem(key)
+  if (raw === null || raw === undefined) return fallback
+
+  try {
+    const parsed = JSON.parse(raw) as T
+    return parsed ?? fallback
+  } catch {
+    return fallback
+  }
+}
+
+export function writeJson(key: string, value: unknown): void {
+  try {
+    storage()?.setItem(key, JSON.stringify(value))
+  } catch {
+    // Quota dépassé ou stockage refusé : la session reste utilisable en mémoire.
+  }
+}
+
+export function readString(key: string): string {
+  return storage()?.getItem(key) ?? ''
+}
+
+export function writeString(key: string, value: string): void {
+  try {
+    if (value) storage()?.setItem(key, value)
+    else storage()?.removeItem(key)
+  } catch {
+    // idem : on n'interrompt jamais l'atelier pour un échec d'écriture.
+  }
+}
+
+export function readPrefs(): Prefs {
+  const stored = readJson<Partial<Prefs>>(STORAGE_KEYS.prefs, {})
+  return {
+    ...DEFAULT_PREFS,
+    ...stored,
+    pricing: { ...DEFAULT_PREFS.pricing, ...stored.pricing },
+  }
+}

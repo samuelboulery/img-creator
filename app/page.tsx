@@ -1,11 +1,12 @@
 'use client'
 
-import { useReducer, useState } from 'react'
+import { useEffect, useReducer, useState } from 'react'
 import CanvasHeader from '@/components/atelier/CanvasHeader'
 import Composer from '@/components/atelier/Composer'
 import Drawer from '@/components/atelier/Drawer'
 import ErrorBanner from '@/components/atelier/ErrorBanner'
 import Rail from '@/components/atelier/Rail'
+import SettingsDrawer, { type KeyKind } from '@/components/atelier/drawers/SettingsDrawer'
 import Explore, { type PendingTile } from '@/components/atelier/modes/Explore'
 import JsonTab from '@/components/atelier/panel/JsonTab'
 import RecipeTab, {
@@ -13,10 +14,20 @@ import RecipeTab, {
   type RecipeState,
 } from '@/components/atelier/panel/RecipeTab'
 import SettingsPanel from '@/components/atelier/panel/SettingsPanel'
-import { DEFAULT_PRICING, estimateCost } from '@/lib/atelier/cost'
+import { estimateCost } from '@/lib/atelier/cost'
 import { toReferenceImage } from '@/lib/atelier/image-file'
 import { DEFAULT_PARAMS } from '@/lib/atelier/params'
 import { atelierReducer, initialAtelierState, isPanelVisible } from '@/lib/atelier/reducer'
+import {
+  DEFAULT_PREFS,
+  readJson,
+  readPrefs,
+  readString,
+  STORAGE_KEYS,
+  writeJson,
+  writeString,
+  type Prefs,
+} from '@/lib/atelier/storage'
 import type {
   DrawerId,
   GalleryItem,
@@ -32,10 +43,21 @@ const DRAWER_TITLES: Record<DrawerId, string> = {
   settings: 'Réglages',
 }
 
-const KEY_STORAGE: Record<string, string> = {
-  'nano-banana-2': 'gemini_api_key',
-  'gpt-image-2': 'openai_api_key',
+const KEY_OF_ADAPTER: Record<string, KeyKind> = {
+  'nano-banana-2': 'gemini',
+  'gpt-image-2': 'openai',
 }
+
+const KEY_STORAGE: Record<KeyKind, string> = {
+  gemini: STORAGE_KEYS.geminiKey,
+  openai: STORAGE_KEYS.openaiKey,
+  text: STORAGE_KEYS.textKey,
+}
+
+// ponytail: la session gardée en localStorage est plafonnée — les images sont
+// du base64 et le quota du navigateur est de quelques Mo. Passer à IndexedDB
+// si l'historique complet devient nécessaire.
+const MAX_PERSISTED_ITEMS = 12
 
 export default function Home() {
   const [state, dispatch] = useReducer(atelierReducer, initialAtelierState)
@@ -45,8 +67,46 @@ export default function Home() {
   const [recipe, setRecipe] = useState<RecipeState>(DEFAULT_RECIPE_STATE)
   const [items, setItems] = useState<GalleryItem[]>([])
   const [pending, setPending] = useState<PendingTile[]>([])
+  const [keys, setKeys] = useState<Record<KeyKind, string>>({
+    gemini: '',
+    openai: '',
+    text: '',
+  })
+  const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS)
+  const [hydrated, setHydrated] = useState(false)
 
-  const estimatedCost = estimateCost(state.adapterId, params.batch, DEFAULT_PRICING)
+  // Relecture du navigateur au montage : aucun appel serveur.
+  useEffect(() => {
+    setKeys({
+      gemini: readString(STORAGE_KEYS.geminiKey),
+      openai: readString(STORAGE_KEYS.openaiKey),
+      text: readString(STORAGE_KEYS.textKey),
+    })
+    setPrefs(readPrefs())
+    setParams(readJson<GenerationParams>(STORAGE_KEYS.params, DEFAULT_PARAMS))
+    setItems(readJson<GalleryItem[]>(STORAGE_KEYS.session, []))
+    setHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (hydrated) writeJson(STORAGE_KEYS.params, params)
+  }, [params, hydrated])
+
+  useEffect(() => {
+    if (hydrated) writeJson(STORAGE_KEYS.session, items.slice(0, MAX_PERSISTED_ITEMS))
+  }, [items, hydrated])
+
+  useEffect(() => {
+    if (hydrated) writeJson(STORAGE_KEYS.prefs, prefs)
+  }, [prefs, hydrated])
+
+  function setKey(kind: KeyKind, value: string) {
+    setKeys((previous) => ({ ...previous, [kind]: value }))
+    writeString(KEY_STORAGE[kind], value)
+  }
+
+  const estimatedCost = estimateCost(state.adapterId, params.batch, prefs.pricing)
+  const imageKeyCount = [keys.gemini, keys.openai].filter((key) => key.trim()).length
 
   function buildRequest(text: string): GenerationRequest {
     return {
@@ -72,7 +132,7 @@ export default function Home() {
     dispatch({ type: 'setError', error: null })
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-    const key = window.localStorage.getItem(KEY_STORAGE[state.adapterId])
+    const key = keys[KEY_OF_ADAPTER[state.adapterId]]
     if (key) headers['x-api-key'] = key
 
     try {
@@ -98,7 +158,7 @@ export default function Home() {
         parentId,
         recipeId: null,
         latencyMs,
-        costEur: estimateCost(state.adapterId, 1, DEFAULT_PRICING),
+        costEur: estimateCost(state.adapterId, 1, prefs.pricing),
         createdAt: new Date().toISOString(),
       }))
 
@@ -137,9 +197,19 @@ export default function Home() {
             title={DRAWER_TITLES[state.openDrawer]}
             onClose={() => dispatch({ type: 'closeDrawer' })}
           >
-            <p className="text-[12.5px] text-meta">
-              Contenu livré par un ticket dédié (T-0010 à T-0013).
-            </p>
+            {state.openDrawer === 'settings' ? (
+              <SettingsDrawer
+                keys={keys}
+                onKeyChange={setKey}
+                prefs={prefs}
+                onPrefsChange={setPrefs}
+                onReviewOnboarding={() => writeJson(STORAGE_KEYS.onboarded, false)}
+              />
+            ) : (
+              <p className="text-[12.5px] text-meta">
+                Contenu livré par un ticket dédié (T-0011 à T-0013).
+              </p>
+            )}
           </Drawer>
         )}
 
@@ -188,7 +258,7 @@ export default function Home() {
             aspectRatio={params.aspectRatio}
             batch={params.batch}
             estimatedCost={estimatedCost}
-            hasEnrichKey={false}
+            hasEnrichKey={keys.text.trim().length > 0}
             onEnrich={() => dispatch({ type: 'toggleDrawer', drawer: 'enrich' })}
             onSubmit={() => generate(prompt)}
           />
@@ -202,7 +272,7 @@ export default function Home() {
               setParams(DEFAULT_PARAMS)
               setRecipe(DEFAULT_RECIPE_STATE)
             }}
-            keysSummary="ce navigateur"
+            keysSummary={`image ×${imageKeyCount} · texte ×${keys.text ? 1 : 0} · ce navigateur`}
           >
             {state.panelTab === 'recipe' ? (
               <RecipeTab

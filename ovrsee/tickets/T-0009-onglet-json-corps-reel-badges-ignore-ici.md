@@ -2,7 +2,7 @@
 {
   "id": "T-0009",
   "titre": "Onglet JSON : corps réel, encart « ignoré par ce modèle », copier",
-  "colonne": "en-cours",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "s",
   "tags": [

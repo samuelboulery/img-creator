@@ -2,7 +2,7 @@
 {
   "id": "T-0007",
   "titre": "GenerationParams complet + panneau Recette (5 sections)",
-  "colonne": "en-cours",
+  "colonne": "fait",
   "priorite": "haute",
   "charge": "l",
   "tags": [

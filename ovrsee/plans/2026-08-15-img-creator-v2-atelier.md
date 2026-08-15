@@ -60,6 +60,34 @@
         "lib/types.ts",
         "tests/atelier/reducer.test.ts"
       ]
+    },
+    {
+      "sha": "835b7d5",
+      "date": "2026-08-15",
+      "files": [
+        "app/api/generate/route.ts",
+        "app/page.tsx",
+        "components/ApiKeyInput.tsx",
+        "components/ImageGallery.tsx",
+        "components/PromptForm.tsx",
+        "components/atelier/panel/Choice.tsx",
+        "components/atelier/panel/JsonTab.tsx",
+        "components/atelier/panel/RawParams.tsx",
+        "components/atelier/panel/RecipeTab.tsx",
+        "components/atelier/panel/ReferenceGrid.tsx",
+        "components/atelier/panel/Section.tsx",
+        "components/atelier/panel/Slider.tsx",
+        "components/atelier/panel/Switch.tsx",
+        "lib/adapters/capabilities.ts",
+        "lib/adapters/gpt-image-2.ts",
+        "lib/adapters/nano-banana-2.ts",
+        "lib/adapters/payload.ts",
+        "lib/adapters/shared.ts",
+        "lib/atelier/image-file.ts",
+        "lib/atelier/params.ts",
+        "lib/types.ts",
+        "tests/adapters/payload.test.ts"
+      ]
     }
   ]
 }
