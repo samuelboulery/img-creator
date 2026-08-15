@@ -1,6 +1,8 @@
 'use client'
 
+import { useRef } from 'react'
 import { CheckCircle, Sparkle } from '@phosphor-icons/react/dist/ssr'
+import { useFocusTrap } from '@/lib/atelier/focus-trap'
 import type { KeyKind } from '@/lib/types'
 
 interface KeyFieldProps {
@@ -43,9 +45,13 @@ interface OnboardingProps {
 }
 
 export default function Onboarding({ keys, onKeyChange, onEnter }: OnboardingProps) {
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(dialogRef)
+
   return (
     <div className="absolute inset-0 z-[60] bg-[rgb(6_8_11/0.78)] backdrop-blur-[22px]">
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Connecte un modèle"

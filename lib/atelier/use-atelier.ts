@@ -81,7 +81,7 @@ export function useAtelier() {
     text: '',
   })
   const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS)
-  const [onboarded, setOnboarded] = useState(true)
+  const [onboarding, setOnboarding] = useState(false)
   const [ab, setAb] = useState<AbState>({
     a: null,
     b: null,
@@ -104,7 +104,11 @@ export function useAtelier() {
     setParams(readJson<GenerationParams>(STORAGE_KEYS.params, DEFAULT_PARAMS))
     setItems(readJson<GalleryItem[]>(STORAGE_KEYS.session, []))
     setRecipes(readJson<Recipe[]>(STORAGE_KEYS.recipes, []))
-    setOnboarded(readJson<boolean>(STORAGE_KEYS.onboarded, false))
+    setOnboarding(
+      !readJson<boolean>(STORAGE_KEYS.onboarded, false) &&
+        !readString(STORAGE_KEYS.geminiKey) &&
+        !readString(STORAGE_KEYS.openaiKey)
+    )
     setHydrated(true)
   }, [])
 
@@ -124,9 +128,17 @@ export function useAtelier() {
     if (hydrated) writeJson(STORAGE_KEYS.recipes, recipes)
   }, [recipes, hydrated])
 
-  useEffect(() => {
-    if (hydrated) writeJson(STORAGE_KEYS.onboarded, onboarded)
-  }, [onboarded, hydrated])
+  /** Entrer dans l'atelier ferme l'accueil pour de bon. */
+  function finishOnboarding() {
+    setOnboarding(false)
+    writeJson(STORAGE_KEYS.onboarded, true)
+  }
+
+  /** « Revoir l'écran d'accueil » depuis les réglages. */
+  function reviewOnboarding() {
+    writeJson(STORAGE_KEYS.onboarded, false)
+    setOnboarding(true)
+  }
 
   function setKey(kind: KeyKind, value: string) {
     setKeys((previous) => ({ ...previous, [kind]: value }))
@@ -340,8 +352,9 @@ export function useAtelier() {
     hasKeyFor,
     prefs,
     setPrefs,
-    onboarded,
-    setOnboarded,
+    onboarding,
+    finishOnboarding,
+    reviewOnboarding,
     estimatedCost: estimateCost(state.adapterId, params.batch, prefs.pricing),
     imageKeyCount: [keys.gemini, keys.openai].filter((key) => key.trim()).length,
     buildRequest,

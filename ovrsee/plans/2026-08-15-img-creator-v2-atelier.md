@@ -159,6 +159,15 @@
         "components/atelier/overlays/Viewer.tsx",
         "lib/atelier/export.ts"
       ]
+    },
+    {
+      "sha": "4e72956",
+      "date": "2026-08-15",
+      "files": [
+        "app/api/enrich/route.ts",
+        "app/page.tsx",
+        "components/atelier/drawers/EnrichDrawer.tsx"
+      ]
     }
   ]
 }

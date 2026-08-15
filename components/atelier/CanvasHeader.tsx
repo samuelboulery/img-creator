@@ -17,6 +17,9 @@ interface CanvasHeaderProps {
   onModeChange: (mode: Mode) => void
   onToggleAdapter: () => void
   onOpenCommandPalette: () => void
+  /** Déplie le panneau de paramètres sous ~1100 px, où il est masqué. */
+  onTogglePanel: () => void
+  panelOpen: boolean
 }
 
 export default function CanvasHeader({
@@ -27,6 +30,8 @@ export default function CanvasHeader({
   onModeChange,
   onToggleAdapter,
   onOpenCommandPalette,
+  onTogglePanel,
+  panelOpen,
 }: CanvasHeaderProps) {
   return (
     <header className="flex min-h-[56px] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4">
@@ -63,6 +68,15 @@ export default function CanvasHeader({
         >
           <span className="h-[7px] w-[7px] rounded-full bg-accent" />
           {adapterId}
+        </button>
+
+        <button
+          type="button"
+          onClick={onTogglePanel}
+          aria-pressed={panelOpen}
+          className="hidden rounded-chip bg-field px-[10px] py-[6px] text-[12px] text-body-soft transition-colors duration-[240ms] hover:bg-field-hover max-[1100px]:block"
+        >
+          Paramètres
         </button>
 
         <button

@@ -8,6 +8,7 @@ import {
   SquaresFour,
 } from '@phosphor-icons/react/dist/ssr'
 import { formatEur } from '@/lib/atelier/cost'
+import { useFocusTrap } from '@/lib/atelier/focus-trap'
 import type { GalleryItem } from '@/lib/types'
 
 interface ViewerProps {
@@ -41,6 +42,8 @@ export default function Viewer({
   onDownload,
 }: ViewerProps) {
   const closeRef = useRef<HTMLButtonElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(dialogRef)
   const index = Math.max(
     0,
     items.findIndex((item) => item.id === selectedId)
@@ -69,6 +72,7 @@ export default function Viewer({
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-label="Image en plein écran"

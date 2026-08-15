@@ -16,6 +16,8 @@ export interface AtelierState {
   error: string | null
   /** Cases cochées de la planche contact (mode Produire). */
   sheetSelection: string[]
+  /** Sous ~1100 px, le panneau de paramètres se déplie à la demande. */
+  panelOpen: boolean
 }
 
 export const DEFAULT_OPEN_SECTIONS: Record<string, boolean> = {
@@ -37,6 +39,7 @@ export const initialAtelierState: AtelierState = {
   cmdOpen: false,
   error: null,
   sheetSelection: [],
+  panelOpen: false,
 }
 
 export type AtelierAction =
@@ -55,6 +58,7 @@ export type AtelierAction =
   | { type: 'setError'; error: string | null }
   | { type: 'toggleSheet'; id: string }
   | { type: 'selectSheet'; ids: string[] }
+  | { type: 'togglePanel' }
 
 const OTHER_ADAPTER: Record<AdapterId, AdapterId> = {
   'nano-banana-2': 'gpt-image-2',
@@ -123,6 +127,9 @@ export function atelierReducer(state: AtelierState, action: AtelierAction): Atel
 
     case 'selectSheet':
       return { ...state, sheetSelection: action.ids }
+
+    case 'togglePanel':
+      return { ...state, panelOpen: !state.panelOpen }
   }
 }
 

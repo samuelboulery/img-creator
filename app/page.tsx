@@ -38,7 +38,6 @@ import { downloadImage, downloadJson, exportSheet } from '@/lib/atelier/export'
 import { createRecipe, serializeRecipes } from '@/lib/atelier/recipes'
 import { toReferenceImage } from '@/lib/atelier/image-file'
 import { isPanelVisible } from '@/lib/atelier/reducer'
-import { STORAGE_KEYS, writeJson } from '@/lib/atelier/storage'
 import { useAtelier } from '@/lib/atelier/use-atelier'
 import type { DrawerId } from '@/lib/types'
 
@@ -169,7 +168,7 @@ export default function Home() {
     [atelier, dispatch]
   )
 
-  const needsOnboarding = !atelier.onboarded && atelier.imageKeyCount === 0
+  const needsOnboarding = atelier.onboarding
 
   const counterLabel =
     items.length > 0
@@ -211,7 +210,7 @@ export default function Home() {
                 onKeyChange={atelier.setKey}
                 prefs={prefs}
                 onPrefsChange={atelier.setPrefs}
-                onReviewOnboarding={() => writeJson(STORAGE_KEYS.onboarded, false)}
+                onReviewOnboarding={atelier.reviewOnboarding}
               />
             ) : state.openDrawer === 'recipes' ? (
               <RecipesDrawer
@@ -251,6 +250,8 @@ export default function Home() {
             onModeChange={(mode) => dispatch({ type: 'setMode', mode })}
             onToggleAdapter={() => dispatch({ type: 'toggleAdapter' })}
             onOpenCommandPalette={() => dispatch({ type: 'toggleCmd' })}
+            onTogglePanel={() => dispatch({ type: 'togglePanel' })}
+            panelOpen={state.panelOpen}
           />
 
           <div className="min-h-0 flex-1">
@@ -333,7 +334,16 @@ export default function Home() {
         </main>
 
         {isPanelVisible(state) && (
-          <SettingsPanel
+          <div
+            // Sous 1100 px le panneau se replie derrière un bouton et revient
+            // en surcouche : c'est le canvas qui garde sa place.
+            className={
+              state.panelOpen
+                ? 'flex max-[1100px]:absolute max-[1100px]:inset-y-[10px] max-[1100px]:right-[10px] max-[1100px]:z-30'
+                : 'flex max-[1100px]:hidden'
+            }
+          >
+            <SettingsPanel
             tab={state.panelTab}
             onTabChange={(tab) => dispatch({ type: 'setPanelTab', tab })}
             onReset={atelier.resetParams}
@@ -355,7 +365,8 @@ export default function Home() {
             ) : (
               <JsonTab request={atelier.buildRequest(atelier.prompt || '…')} />
             )}
-          </SettingsPanel>
+            </SettingsPanel>
+          </div>
         )}
         {state.cmdOpen && (
           <CommandPalette
@@ -368,7 +379,7 @@ export default function Home() {
           <Onboarding
             keys={atelier.keys}
             onKeyChange={atelier.setKey}
-            onEnter={() => atelier.setOnboarded(true)}
+            onEnter={atelier.finishOnboarding}
           />
         )}
 

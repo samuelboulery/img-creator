@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { MagnifyingGlass, type Icon } from '@phosphor-icons/react'
+import { useFocusTrap } from '@/lib/atelier/focus-trap'
 
 export interface Command {
   id: string
@@ -20,6 +21,8 @@ export default function CommandPalette({ commands, onClose }: CommandPaletteProp
   const [query, setQuery] = useState('')
   const [cursor, setCursor] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(dialogRef)
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase()
@@ -56,6 +59,7 @@ export default function CommandPalette({ commands, onClose }: CommandPaletteProp
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Palette de commandes"
