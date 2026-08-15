@@ -5,7 +5,10 @@
   "colonne": "pret",
   "priorite": "haute",
   "charge": "m",
-  "tags": ["ui", "shell"],
+  "tags": [
+    "ui",
+    "shell"
+  ],
   "cree": "2026-08-15",
   "maj": "2026-08-15",
   "plan": "2026-08-15-img-creator-v2-atelier.md",

@@ -18,6 +18,13 @@
         "lib/adapters/nano-banana-2.ts",
         "lib/types.ts"
       ]
+    },
+    {
+      "sha": "308e94d",
+      "date": "2026-08-15",
+      "files": [
+        "ovrsee.config.json"
+      ]
     }
   ]
 }

@@ -2,10 +2,13 @@
 {
   "id": "T-0003",
   "titre": "Infra de test : Vitest + Playwright",
-  "colonne": "pret",
+  "colonne": "en-cours",
   "priorite": "moyenne",
   "charge": "s",
-  "tags": ["test", "socle"],
+  "tags": [
+    "test",
+    "socle"
+  ],
   "cree": "2026-08-15",
   "maj": "2026-08-15",
   "plan": "2026-08-15-img-creator-v2-atelier.md",

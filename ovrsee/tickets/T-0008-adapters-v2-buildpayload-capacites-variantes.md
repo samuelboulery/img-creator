@@ -5,7 +5,10 @@
   "colonne": "pret",
   "priorite": "haute",
   "charge": "l",
-  "tags": ["api", "adapters"],
+  "tags": [
+    "api",
+    "adapters"
+  ],
   "cree": "2026-08-15",
   "maj": "2026-08-15",
   "plan": "2026-08-15-img-creator-v2-atelier.md",

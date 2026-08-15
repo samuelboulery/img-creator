@@ -1,26 +1,178 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ──────────────────────────────────────────────────────────────────────────
+   Tokens de l'atelier — handoff img-creator v2, section « Design tokens ».
+   Tailwind v4 : configuration CSS-first, pas de tailwind.config.js.
+   ────────────────────────────────────────────────────────────────────────── */
+
+@theme {
+  /* Fonds et surfaces (graphite froid) */
+  --color-app: #08090d;
+  --color-panel: #0d0f15;
+  --color-section: #111520;
+  --color-field: #141821;
+  --color-field-hover: #1a1f2a;
+  --color-selected: #1f2531;
+  --color-tab: #222834;
+  --color-track: #1d2330;
+  --color-rail-active: #171c26;
+  --color-tile: #14111e;
+  --color-code: #0b0e14;
+
+  /* Traits */
+  --color-line: #1c222d;
+  --color-separator: #181d26;
+  --color-dash: #28303d;
+
+  /* Texte, du plus fort au plus faible */
+  --color-title: #eceff4;
+  --color-body: #dfe5ee;
+  --color-body-soft: #cfd6e1;
+  --color-mono: #bdc5d2;
+  --color-label: #8f98a8;
+  --color-icon: #848d9e;
+  --color-meta: #7f8896;
+  --color-faint: #6e7784;
+  --color-disabled: #666e7e;
+
+  /* Accent ambre — boutons et états actifs uniquement */
+  --color-accent: oklch(0.72 0.21 72);
+  --color-accent-light: oklch(0.82 0.16 72);
+  --color-accent-lighter: oklch(0.84 0.15 72);
+  --color-accent-ink: #231400;
+  --color-link: #e8b15e;
+  --color-link-hover: #f2c889;
+
+  /* Erreur */
+  --color-error-surface: rgb(58 26 20 / 0.55);
+  --color-error-line: rgb(224 138 107 / 0.35);
+  --color-error-icon: #e8a184;
+  --color-error-text: #ebc7b6;
+  --color-error-button: rgb(232 161 132 / 0.14);
+
+  /* Polices */
+  --font-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  /* Géométrie */
+  --radius-panel: 18px;
+  --radius-composer: 16px;
+  --radius-rail: 14px;
+  --radius-section: 13px;
+  --radius-button: 12px;
+  --radius-ref: 11px;
+  --radius-chip: 10px;
+  --radius-switch: 9px;
+  --radius-pill: 8px;
+
+  /* Colonnes */
+  --spacing-rail: 78px;
+  --spacing-drawer: 268px;
+  --spacing-panel: 320px;
+  --spacing-canvas-min: 420px;
+
+  /* Animations */
+  --animate-shimmer: shimmer 1.9s linear infinite;
+  --animate-breathe: breathe 3.4s ease-in-out infinite;
+  --animate-drift: drift 34s ease-in-out infinite;
+
+  /* Courbe des fondus d'ambiance */
+  --ease-ambient: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(-3%, 2%, 0) scale(1.06);
+  }
+  66% {
+    transform: translate3d(3%, -2%, 0) scale(1.04);
+  }
+}
+
+/* ── Éléments qui ne se disent pas en utilitaires ────────────────────────── */
+
+@layer components {
+  /* Bouton principal : dégradé ambre + halo. Handoff, « Couleur d'accent ». */
+  .btn-accent {
+    background: linear-gradient(160deg, oklch(0.76 0.2 85), oklch(0.66 0.22 58));
+    color: var(--color-accent-ink);
+    box-shadow:
+      0 0 0 1px oklch(0.8 0.16 85 / 0.5),
+      0 10px 34px -10px oklch(0.72 0.21 72),
+      inset 0 1px 0 oklch(0.9 0.1 85 / 0.6);
+    transition:
+      box-shadow 240ms,
+      transform 240ms;
+  }
+
+  .btn-accent:hover:not(:disabled) {
+    box-shadow:
+      0 0 0 1px oklch(0.86 0.14 85 / 0.7),
+      0 14px 44px -8px oklch(0.72 0.21 72),
+      inset 0 1px 0 oklch(0.94 0.08 85 / 0.7);
+    transform: translateY(-1px);
+  }
+
+  /* Halo d'un élément sélectionné — jamais sur une image. */
+  .ring-selected {
+    box-shadow:
+      0 0 0 1px oklch(0.72 0.21 72 / 0.5),
+      0 0 20px -8px oklch(0.72 0.21 72);
+  }
+
+  /* Sélection d'un visuel : liseré sobre, aucun halo coloré. */
+  .ring-visual {
+    box-shadow:
+      inset 0 0 0 1px rgb(255 255 255 / 0.07),
+      0 0 0 1px oklch(0.72 0.21 72 / 0.14);
+  }
+
+  /* Texture rayée des visuels. */
+  .hatch {
+    background-image: repeating-linear-gradient(
+      135deg,
+      rgb(255 255 255 / 0.05) 0 10px,
+      transparent 10px 20px
+    );
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-app);
+  color: var(--color-body);
+  font-family: var(--font-sans);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 120ms !important;
+  }
 }

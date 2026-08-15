@@ -2,10 +2,13 @@
 {
   "id": "T-0002",
   "titre": "Socle visuel : tokens, polices, icônes Phosphor",
-  "colonne": "pret",
+  "colonne": "en-cours",
   "priorite": "haute",
   "charge": "s",
-  "tags": ["ui", "socle"],
+  "tags": [
+    "ui",
+    "socle"
+  ],
   "cree": "2026-08-15",
   "maj": "2026-08-15",
   "plan": "2026-08-15-img-creator-v2-atelier.md",
