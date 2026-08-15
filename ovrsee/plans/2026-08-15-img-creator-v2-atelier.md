@@ -136,6 +136,18 @@
         "lib/types.ts",
         "tests/atelier/diff.test.ts"
       ]
+    },
+    {
+      "sha": "414bee7",
+      "date": "2026-08-15",
+      "files": [
+        "app/page.tsx",
+        "components/atelier/modes/Compare.tsx",
+        "components/atelier/modes/Produce.tsx",
+        "lib/atelier/export.ts",
+        "lib/atelier/reducer.ts",
+        "lib/atelier/use-atelier.ts"
+      ]
     }
   ]
 }

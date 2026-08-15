@@ -1,5 +1,19 @@
 'use client'
 
+import { useEffect, useMemo } from 'react'
+import {
+  Books,
+  Broom,
+  ClockCounterClockwise,
+  FileArrowDown,
+  GitBranch,
+  GridFour,
+  SlidersHorizontal,
+  Sparkle,
+  SquareSplitHorizontal,
+  Swap,
+  WarningCircle,
+} from '@phosphor-icons/react/dist/ssr'
 import AmbientBackground from '@/components/atelier/AmbientBackground'
 import CanvasHeader from '@/components/atelier/CanvasHeader'
 import Composer from '@/components/atelier/Composer'
@@ -13,10 +27,15 @@ import Compare from '@/components/atelier/modes/Compare'
 import Explore from '@/components/atelier/modes/Explore'
 import Iterate from '@/components/atelier/modes/Iterate'
 import Produce from '@/components/atelier/modes/Produce'
+import CommandPalette, { type Command } from '@/components/atelier/overlays/CommandPalette'
+import Onboarding from '@/components/atelier/overlays/Onboarding'
+import Viewer from '@/components/atelier/overlays/Viewer'
 import JsonTab from '@/components/atelier/panel/JsonTab'
 import RecipeTab from '@/components/atelier/panel/RecipeTab'
 import SettingsPanel from '@/components/atelier/panel/SettingsPanel'
-import { exportSheet } from '@/lib/atelier/export'
+import { downloadImage, downloadJson, exportSheet } from '@/lib/atelier/export'
+import { createRecipe, serializeRecipes } from '@/lib/atelier/recipes'
+import { toReferenceImage } from '@/lib/atelier/image-file'
 import { isPanelVisible } from '@/lib/atelier/reducer'
 import { STORAGE_KEYS, writeJson } from '@/lib/atelier/storage'
 import { useAtelier } from '@/lib/atelier/use-atelier'
@@ -32,6 +51,124 @@ const DRAWER_TITLES: Record<DrawerId, string> = {
 export default function Home() {
   const atelier = useAtelier()
   const { state, dispatch, items, prefs } = atelier
+
+  // ⌘K ouvre la palette, Échap referme ce qui est au-dessus.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault()
+        dispatch({ type: 'toggleCmd' })
+      }
+      if (event.key === 'Escape') dispatch({ type: 'closeOverlays' })
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [dispatch])
+
+  const commands: Command[] = useMemo(
+    () => [
+      {
+        id: 'generate',
+        label: 'Générer maintenant',
+        shortcut: '⏎',
+        icon: Sparkle,
+        run: () => void atelier.generate(atelier.prompt),
+      },
+      {
+        id: 'swap-model',
+        label: 'Changer de modèle',
+        shortcut: 'M',
+        icon: Swap,
+        run: () => dispatch({ type: 'toggleAdapter' }),
+      },
+      {
+        id: 'compare',
+        label: 'Comparer les deux modèles',
+        shortcut: 'A/B',
+        icon: SquareSplitHorizontal,
+        run: () => dispatch({ type: 'setMode', mode: 'ab' }),
+      },
+      {
+        id: 'iterate',
+        label: 'Passer en mode Itérer',
+        icon: GitBranch,
+        run: () => dispatch({ type: 'setMode', mode: 'iterate' }),
+      },
+      {
+        id: 'produce',
+        label: 'Passer en mode Produire',
+        icon: GridFour,
+        run: () => dispatch({ type: 'setMode', mode: 'produce' }),
+      },
+      {
+        id: 'library',
+        label: 'Ouvrir la bibliothèque',
+        icon: Books,
+        run: () => dispatch({ type: 'toggleDrawer', drawer: 'recipes' }),
+      },
+      {
+        id: 'history',
+        label: "Ouvrir l'historique",
+        icon: ClockCounterClockwise,
+        run: () => dispatch({ type: 'toggleDrawer', drawer: 'history' }),
+      },
+      {
+        id: 'settings',
+        label: 'Réglages & clés API',
+        icon: SlidersHorizontal,
+        run: () => dispatch({ type: 'toggleDrawer', drawer: 'settings' }),
+      },
+      {
+        id: 'export-recipe',
+        label: 'Exporter la recette en .json',
+        icon: FileArrowDown,
+        run: () =>
+          downloadJson(
+            serializeRecipes([
+              createRecipe({
+                id: crypto.randomUUID(),
+                name: atelier.activeRecipe?.name ?? 'recette courante',
+                subjectImages: atelier.recipe.subjectImages.map(toReferenceImage),
+                subjectWeight: atelier.recipe.subjectWeight,
+                styleImages: atelier.recipe.styleImages.map(toReferenceImage),
+                styleWeight: atelier.recipe.styleWeight,
+                identityLock: atelier.recipe.identityLock,
+                paletteTransfer: atelier.recipe.paletteTransfer,
+                promptSuffix: atelier.promptSuffix,
+                negative: atelier.negative,
+                params: atelier.params,
+              }),
+            ]),
+            'recette.json'
+          ),
+      },
+      {
+        id: 'clear',
+        label: 'Vider la session',
+        icon: Broom,
+        run: () => {
+          atelier.setItems([])
+          dispatch({ type: 'select', id: null })
+          dispatch({ type: 'selectSheet', ids: [] })
+        },
+      },
+      {
+        id: 'simulate-error',
+        label: "(dev) Simuler un échec d'API",
+        icon: WarningCircle,
+        run: () =>
+          dispatch({
+            type: 'setError',
+            error:
+              'gpt-image-2 a renvoyé 429 — quota de ta clé OpenAI atteint. Les réglages sont conservés.',
+          }),
+      },
+    ],
+    [atelier, dispatch]
+  )
+
+  const needsOnboarding = !atelier.onboarded && atelier.imageKeyCount === 0
 
   const counterLabel =
     items.length > 0
@@ -211,6 +348,37 @@ export default function Home() {
               <JsonTab request={atelier.buildRequest(atelier.prompt || '…')} />
             )}
           </SettingsPanel>
+        )}
+        {state.cmdOpen && (
+          <CommandPalette
+            commands={commands}
+            onClose={() => dispatch({ type: 'closeOverlays' })}
+          />
+        )}
+
+        {needsOnboarding && (
+          <Onboarding
+            keys={atelier.keys}
+            onKeyChange={atelier.setKey}
+            onEnter={() => atelier.setOnboarded(true)}
+          />
+        )}
+
+        {state.viewerOpen && (
+          <Viewer
+            items={items}
+            selectedId={state.selectedId}
+            recipeName={atelier.activeRecipe?.name ?? null}
+            onSelect={(id) => dispatch({ type: 'select', id })}
+            onClose={() => dispatch({ type: 'closeViewer' })}
+            onReusePrompt={(item) => {
+              atelier.setPrompt(item.prompt)
+              atelier.setNegative(item.negative)
+              dispatch({ type: 'closeViewer' })
+            }}
+            onDecline={(item) => void atelier.generate(item.prompt, { parentId: item.id })}
+            onDownload={downloadImage}
+          />
         )}
       </div>
     </div>

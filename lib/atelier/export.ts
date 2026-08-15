@@ -17,6 +17,10 @@ function base64ToBlob(base64: string, mimeType: string): Blob {
   return new Blob([bytes], { type: mimeType })
 }
 
+export function downloadJson(content: string, filename: string) {
+  download(new Blob([content], { type: 'application/json' }), filename)
+}
+
 export function downloadImage(item: GalleryItem) {
   const extension = item.result.mimeType.split('/')[1] ?? 'png'
   download(base64ToBlob(item.result.imageBase64, item.result.mimeType), `${shortId(item)}.${extension}`)
