@@ -12,7 +12,9 @@ One prompt, several models, side by side — no account, no database, no server 
 
 [Quick start](#quick-start) · [Why](#why) · [Models](#models) · [How it works](#how-it-works) · [Français](README.fr.md)
 
-<img src="docs/screenshot.png" alt="The img-creator workshop: tool rail, canvas, composer and settings panel" width="900">
+<img src="docs/screenshot.png" alt="The img-creator workshop: tool rail, canvas holding a 24-image session, composer and settings panel" width="900">
+
+<sub>Demo session: the visuals are royalty-free photographs, not model output. Regenerate the screenshots with <code>node scripts/screenshots.mjs</code>.</sub>
 
 </div>
 
