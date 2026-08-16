@@ -1,5 +1,6 @@
 'use client'
 
+import { Trash } from '@phosphor-icons/react/dist/ssr'
 import { useRef, useState } from 'react'
 import { mergeRecipes, parseRecipesFile, serializeRecipes } from '@/lib/atelier/recipes'
 import type { Recipe } from '@/lib/types'
@@ -8,53 +9,79 @@ function RecipeCard({
   recipe,
   active,
   onApply,
+  onDelete,
 }: {
   recipe: Recipe
   active: boolean
   onApply: () => void
+  onDelete: () => void
 }) {
+  const [confirming, setConfirming] = useState(false)
   const thumbs = [...recipe.subjectImages, ...recipe.styleImages].slice(0, 3)
   const referenceCount = recipe.subjectImages.length + recipe.styleImages.length
 
   return (
-    <button
-      type="button"
-      onClick={onApply}
-      aria-pressed={active}
-      className={`w-full rounded-section p-3 text-left transition-colors duration-[240ms] ${
+    <div
+      className={`relative rounded-section transition-colors duration-[240ms] ${
         active ? 'bg-field-hover ring-selected' : 'bg-section hover:bg-field-hover'
       }`}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="truncate text-[13px] text-body">{recipe.name}</span>
-        <span className="shrink-0 font-mono text-[10px] text-meta">
-          {referenceCount} réf · {recipe.styleWeight} %
-        </span>
-      </div>
-
-      {thumbs.length > 0 && (
-        <div className="mt-[8px] flex gap-[6px]">
-          {thumbs.map((image, index) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={index}
-              src={`data:${image.mimeType};base64,${image.base64}`}
-              alt=""
-              className="h-[34px] w-[34px] rounded-switch object-cover"
-            />
-          ))}
+      <button
+        type="button"
+        onClick={onApply}
+        aria-pressed={active}
+        className="w-full rounded-section p-3 text-left"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <span className="truncate text-[13px] text-body">{recipe.name}</span>
+          {/* Place réservée au bouton supprimer, posé en absolu au-dessus. */}
+          <span className="shrink-0 pr-[26px] font-mono text-[10px] text-meta">
+            {referenceCount} réf · {recipe.styleWeight} %
+          </span>
         </div>
-      )}
 
-      {recipe.promptSuffix && (
-        <p className="mt-[8px] truncate font-mono text-[10px] text-meta">
-          + {recipe.promptSuffix}
-        </p>
-      )}
-      {recipe.negative && (
-        <p className="truncate font-mono text-[10px] text-meta">− {recipe.negative}</p>
-      )}
-    </button>
+        {thumbs.length > 0 && (
+          <div className="mt-[8px] flex gap-[6px]">
+            {thumbs.map((image, index) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={index}
+                src={`data:${image.mimeType};base64,${image.base64}`}
+                alt=""
+                className="h-[34px] w-[34px] rounded-switch object-cover"
+              />
+            ))}
+          </div>
+        )}
+
+        {recipe.promptSuffix && (
+          <p className="mt-[8px] truncate font-mono text-[10px] text-meta">
+            + {recipe.promptSuffix}
+          </p>
+        )}
+        {recipe.negative && (
+          <p className="truncate font-mono text-[10px] text-meta">− {recipe.negative}</p>
+        )}
+      </button>
+
+      <button
+        type="button"
+        onClick={() => (confirming ? onDelete() : setConfirming(true))}
+        onBlur={() => setConfirming(false)}
+        aria-label={
+          confirming ? `Confirmer la suppression de ${recipe.name}` : `Supprimer ${recipe.name}`
+        }
+        className={`absolute right-[8px] top-[8px] flex items-center gap-[5px] whitespace-nowrap rounded-chip px-[6px] py-[4px] text-[10.5px] transition-colors duration-[240ms] ${
+          confirming
+            ? 'bg-field text-error-text'
+            : 'text-meta hover:bg-field hover:text-body-soft'
+        }`}
+      >
+        <Trash size={13} weight={confirming ? 'fill' : 'regular'} />
+        {/* Le libellé n'apparaît qu'au moment de confirmer : le tiroir est étroit. */}
+        {confirming && 'Supprimer ?'}
+      </button>
+    </div>
   )
 }
 
@@ -64,6 +91,7 @@ interface RecipesDrawerProps {
   onApply: (recipe: Recipe) => void
   onSaveCurrent: (name: string) => void
   onImport: (recipes: Recipe[]) => void
+  onDelete: (id: string) => void
 }
 
 export default function RecipesDrawer({
@@ -72,6 +100,7 @@ export default function RecipesDrawer({
   onApply,
   onSaveCurrent,
   onImport,
+  onDelete,
 }: RecipesDrawerProps) {
   const [name, setName] = useState('')
   const [importError, setImportError] = useState<string | null>(null)
@@ -119,6 +148,7 @@ export default function RecipesDrawer({
           recipe={recipe}
           active={recipe.id === activeRecipeId}
           onApply={() => onApply(recipe)}
+          onDelete={() => onDelete(recipe.id)}
         />
       ))}
 
@@ -128,7 +158,7 @@ export default function RecipesDrawer({
           onChange={(event) => setName(event.target.value)}
           placeholder="nom de la recette"
           aria-label="Nom de la recette"
-          className="flex-1 rounded-chip bg-field px-2 py-[6px] text-[12px] text-body placeholder:text-faint focus:outline-none"
+          className="min-w-0 flex-1 rounded-chip bg-field px-2 py-[6px] text-[12px] text-body placeholder:text-faint focus:outline-none"
         />
         <button
           type="button"
@@ -137,9 +167,9 @@ export default function RecipesDrawer({
             onSaveCurrent(name.trim())
             setName('')
           }}
-          className="rounded-chip bg-field px-[10px] py-[6px] text-[12px] text-body-soft transition-colors duration-[240ms] hover:bg-field-hover disabled:opacity-40"
+          className="shrink-0 whitespace-nowrap rounded-chip bg-field px-[10px] py-[6px] text-[12px] text-body-soft transition-colors duration-[240ms] hover:bg-field-hover disabled:opacity-40"
         >
-          + Enregistrer
+          Enregistrer
         </button>
       </div>
 

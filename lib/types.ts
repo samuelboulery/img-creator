@@ -116,6 +116,12 @@ export interface GalleryItem {
   params: GenerationParams
   /** Trois couleurs dominantes extraites de l'image — alimente le fond ambiant. */
   palette: [string, string, string] | null
+  /**
+   * Aperçu JPEG ~320 px en data URL, calculé après coup. C'est le seul champ
+   * image toujours persisté : les pleines résolutions ne tiennent pas toutes
+   * dans le quota localStorage.
+   */
+  thumb: string | null
   /** Arborescence de la session : l'image dont celle-ci dérive. */
   parentId: string | null
   recipeId: string | null

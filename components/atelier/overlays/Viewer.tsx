@@ -7,8 +7,10 @@ import {
   DownloadSimple,
   SquaresFour,
 } from '@phosphor-icons/react/dist/ssr'
+import PreviewBadge from '@/components/atelier/PreviewBadge'
 import { formatEur } from '@/lib/atelier/cost'
 import { useFocusTrap } from '@/lib/atelier/focus-trap'
+import { hasFullImage, imageSrc } from '@/lib/atelier/session-store'
 import type { GalleryItem } from '@/lib/types'
 
 interface ViewerProps {
@@ -116,13 +118,18 @@ export default function Viewer({
       </div>
 
       <div className="flex min-h-0 flex-1 gap-[16px]">
-        <div className="flex min-w-0 flex-1 items-center justify-center">
+        <div className="relative flex min-w-0 flex-1 items-center justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={`data:${item.result.mimeType};base64,${item.result.imageBase64}`}
+            src={imageSrc(item)}
             alt={item.prompt}
             className="max-h-full max-w-full rounded-panel object-contain"
           />
+          {!hasFullImage(item) && (
+            <span className="absolute left-0 top-0">
+              <PreviewBadge />
+            </span>
+          )}
         </div>
 
         <aside className="flex w-[380px] shrink-0 flex-col gap-[13px] overflow-y-auto rounded-panel border border-line bg-panel/72 p-4 backdrop-blur-[28px]">
@@ -191,7 +198,13 @@ export default function Viewer({
               <button
                 type="button"
                 onClick={() => onDownload(item)}
-                className="flex flex-1 items-center justify-center gap-[6px] rounded-button bg-field py-[9px] text-[12.5px] text-body-soft transition-colors duration-[240ms] hover:bg-field-hover"
+                disabled={!hasFullImage(item)}
+                title={
+                  hasFullImage(item)
+                    ? undefined
+                    : "l'image pleine résolution n'a pas été conservée"
+                }
+                className="flex flex-1 items-center justify-center gap-[6px] rounded-button bg-field py-[9px] text-[12.5px] text-body-soft transition-colors duration-[240ms] hover:bg-field-hover disabled:opacity-40"
               >
                 <DownloadSimple size={13} />
                 Télécharger

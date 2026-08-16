@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import type { Palette } from '@/lib/atelier/palette'
 
 interface AmbientLayer {
@@ -23,19 +24,36 @@ function mix([c0, c1, c2]: Palette): string {
 }
 
 /**
- * Une couche par image, seule celle de la sélection est visible : changer de
- * sélection fait un fondu de 900 ms d'une ambiance à l'autre. Les images
- * elles-mêmes ne portent aucun effet.
+ * Deux couches au plus — l'ambiance sortante et l'entrante — pour un fondu de
+ * 900 ms d'une image à l'autre. Monter une couche par image de la session
+ * coûterait un flou de 96 px animé en continu pour chacune, invisible ou non.
+ * Les images elles-mêmes ne portent aucun effet.
  */
 export default function AmbientBackground({
   layers,
   selectedId,
   enabled,
 }: AmbientBackgroundProps) {
+  // Ajusté pendant le rendu, pas dans un effet : la couche sortante doit être
+  // présente dès le premier rendu qui suit le changement, sinon il n'y a rien à
+  // faire fondre.
+  const [seen, setSeen] = useState<{ current: string | null; previous: string | null }>({
+    current: selectedId,
+    previous: null,
+  })
+
+  if (seen.current !== selectedId) {
+    setSeen({ current: selectedId, previous: seen.current })
+  }
+
+  const visible = layers.filter(
+    (layer) => layer.id === selectedId || layer.id === seen.previous
+  )
+
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
       {enabled &&
-        layers.map((layer) => (
+        visible.map((layer) => (
           <div
             key={layer.id}
             className="absolute animate-drift"
@@ -47,6 +65,13 @@ export default function AmbientBackground({
               background: mix(layer.palette),
               filter: 'blur(96px) saturate(1.25)',
               opacity: layer.id === selectedId ? 0.35 : 0,
+              // La couche entrante vient d'être montée : une transition n'aurait
+              // rien à interpoler, c'est l'animation qui fait son fondu d'entrée.
+              // La sortante, elle, passe de 0.35 à 0 et transitionne.
+              animation:
+                layer.id === selectedId
+                  ? 'drift 34s ease-in-out infinite, ambient-in 900ms var(--ease-ambient)'
+                  : undefined,
               transition: 'opacity 900ms var(--ease-ambient)',
             }}
           />

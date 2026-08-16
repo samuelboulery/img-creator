@@ -14,9 +14,11 @@ import {
   readString,
   STORAGE_KEYS,
   writeJson,
+  writeSession,
   writeString,
   type Prefs,
 } from './storage'
+import { makeThumbnail } from './thumbnail'
 import type {
   AdapterId,
   KeyKind,
@@ -39,10 +41,9 @@ const KEY_STORAGE: Record<KeyKind, string> = {
   text: STORAGE_KEYS.textKey,
 }
 
-// ponytail: la session gardée en localStorage est plafonnée — les images sont
-// du base64 et le quota du navigateur est de quelques Mo. Passer à IndexedDB
-// si l'historique complet devient nécessaire.
-const MAX_PERSISTED_ITEMS = 12
+// ponytail: `items` n'est pas plafonné en mémoire — les listes n'affichent que
+// des aperçus, donc le coût reste tenable. Passer à IndexedDB si l'historique
+// complet doit survivre au rechargement en pleine résolution.
 
 /** Résultat courant du mode A/B, une colonne par modèle. */
 export interface AbState {
@@ -90,6 +91,11 @@ export function useAtelier() {
     running: false,
   })
   const [hydrated, setHydrated] = useState(false)
+  /**
+   * Ce que la dernière écriture a réellement gardé — affiché dans l'en-tête. On
+   * ne retient que les compteurs : garder les items doublerait la mémoire.
+   */
+  const [persisted, setPersisted] = useState({ kept: 0, fullCount: 0 })
 
   const activeRecipe = recipes.find((entry) => entry.id === activeRecipeId) ?? null
 
@@ -117,7 +123,9 @@ export function useAtelier() {
   }, [params, hydrated])
 
   useEffect(() => {
-    if (hydrated) writeJson(STORAGE_KEYS.session, items.slice(0, MAX_PERSISTED_ITEMS))
+    if (!hydrated) return
+    const written = writeSession(items)
+    setPersisted({ kept: written.items.length, fullCount: written.fullCount })
   }, [items, hydrated])
 
   useEffect(() => {
@@ -206,16 +214,26 @@ export function useAtelier() {
     }
   }
 
-  /** Ajoute la palette extraite à un item déjà affiché. */
-  function attachPalette(item: GalleryItem) {
-    void extractPalette(
-      `data:${item.result.mimeType};base64,${item.result.imageBase64}`
-    ).then((palette) => {
-      if (!palette) return
-      setItems((previous) =>
-        previous.map((entry) => (entry.id === item.id ? { ...entry, palette } : entry))
-      )
-    })
+  /**
+   * Complète un item déjà affiché avec ce qui se dérive de son image : palette
+   * du fond ambiant et aperçu persistable. Les deux calculs partent ensemble et
+   * n'écrivent l'état qu'une fois.
+   */
+  function attachDerived(item: GalleryItem) {
+    const dataUrl = `data:${item.result.mimeType};base64,${item.result.imageBase64}`
+
+    void Promise.all([extractPalette(dataUrl), makeThumbnail(dataUrl)]).then(
+      ([palette, thumb]) => {
+        if (!palette && !thumb) return
+        setItems((previous) =>
+          previous.map((entry) =>
+            entry.id === item.id
+              ? { ...entry, palette: palette ?? entry.palette, thumb: thumb ?? entry.thumb }
+              : entry
+          )
+        )
+      }
+    )
   }
 
   interface RunResult {
@@ -256,6 +274,7 @@ export function useAtelier() {
         seed: params.seedLock ? params.seed : null,
         params,
         palette: null,
+        thumb: null,
         parentId,
         recipeId: activeRecipeId,
         latencyMs,
@@ -266,7 +285,7 @@ export function useAtelier() {
       setItems((previous) => [...created, ...previous])
 
       // La palette arrive après coup : elle ne doit pas retarder l'affichage.
-      created.forEach(attachPalette)
+      created.forEach(attachDerived)
 
       return { created, error: null }
     } catch (error) {
@@ -339,6 +358,7 @@ export function useAtelier() {
     setRecipe,
     items,
     setItems,
+    persisted,
     pending,
     recipes,
     setRecipes,

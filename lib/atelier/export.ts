@@ -1,4 +1,5 @@
 import { shortId } from './diff'
+import { hasFullImage } from './session-store'
 import type { GalleryItem } from '@/lib/types'
 
 function download(blob: Blob, filename: string) {
@@ -30,11 +31,16 @@ export function downloadImage(item: GalleryItem) {
  * Exporte la planche : une image par fichier, plus un `.json` qui garde les
  * recettes — prompt, négatif, modèle, graine et réglages de chaque visuel.
  *
+ * Les items en aperçu seul — pleine résolution perdue au rechargement — n'ont
+ * pas d'image à écrire : leur recette part quand même, jamais un fichier vide.
+ *
  * ponytail: pas de zip, donc un fichier par image. Ajouter une dépendance de
  * compression seulement si le nombre de fichiers devient gênant.
  */
 export function exportSheet(items: GalleryItem[]) {
-  for (const item of items) downloadImage(item)
+  for (const item of items) {
+    if (hasFullImage(item)) downloadImage(item)
+  }
 
   const recipes = items.map((item) => ({
     id: shortId(item),

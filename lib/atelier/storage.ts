@@ -1,4 +1,6 @@
+import type { GalleryItem } from '@/lib/types'
 import { DEFAULT_PRICING, type Pricing } from './cost'
+import { packSession, type PackedSession } from './session-store'
 
 /**
  * L'app n'a ni serveur ni base : localStorage est la seule persistance.
@@ -62,6 +64,38 @@ export function writeJson(key: string, value: unknown): void {
   } catch {
     // Quota dépassé ou stockage refusé : la session reste utilisable en mémoire.
   }
+}
+
+/**
+ * Écrit la session en la rangeant dans le budget, et **renvoie ce qui a
+ * réellement été écrit** : l'appelant peut l'afficher au lieu de laisser
+ * l'utilisateur croire que tout est gardé.
+ */
+export function writeSession(items: GalleryItem[]): PackedSession {
+  let packed = packSession(items)
+
+  while (packed.items.length > 0) {
+    try {
+      storage()?.setItem(STORAGE_KEYS.session, JSON.stringify(packed.items))
+      return packed
+    } catch {
+      // Quota atteint malgré le budget (le reste de l'origine a grossi) : on
+      // réduit de moitié et on retente.
+      const half = Math.floor(packed.items.length / 2)
+      packed = {
+        items: packed.items.slice(0, half),
+        fullCount: Math.min(packed.fullCount, half),
+      }
+    }
+  }
+
+  try {
+    storage()?.removeItem(STORAGE_KEYS.session)
+  } catch {
+    // Stockage refusé : la session reste utilisable en mémoire.
+  }
+
+  return { items: [], fullCount: 0 }
 }
 
 export function readString(key: string): string {

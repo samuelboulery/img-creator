@@ -1,11 +1,9 @@
 'use client'
 
+import PreviewBadge from '@/components/atelier/PreviewBadge'
 import { diffParams, diffPrompt, shortId } from '@/lib/atelier/diff'
+import { hasFullImage, imageSrc, thumbSrc } from '@/lib/atelier/session-store'
 import type { GalleryItem } from '@/lib/types'
-
-function dataUrl(item: GalleryItem): string {
-  return `data:${item.result.mimeType};base64,${item.result.imageBase64}`
-}
 
 function LineageCard({
   item,
@@ -29,8 +27,10 @@ function LineageCard({
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={dataUrl(item)}
+        src={thumbSrc(item)}
         alt=""
+        loading="lazy"
+        decoding="async"
         className="h-[34px] w-[34px] shrink-0 rounded-switch object-cover"
       />
       <span className="min-w-0">
@@ -68,11 +68,16 @@ export default function Iterate({ items, selectedId, onSelect }: IterateProps) {
       <div className="relative min-w-0 flex-1 overflow-hidden rounded-rail ring-visual">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={dataUrl(current)}
+          src={imageSrc(current)}
           alt={current.prompt}
           className="h-full w-full object-cover"
         />
         <span className="hatch pointer-events-none absolute inset-0" />
+        {!hasFullImage(current) && (
+          <span className="absolute left-[14px] top-[14px]">
+            <PreviewBadge />
+          </span>
+        )}
       </div>
 
       <div className="w-[244px] shrink-0 space-y-[13px] overflow-y-auto">
