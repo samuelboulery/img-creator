@@ -1,7 +1,12 @@
 'use client'
 
 import { Check, FileArrowDown, Plus, SelectionAll } from '@phosphor-icons/react/dist/ssr'
+import PreviewBadge from '@/components/atelier/PreviewBadge'
+import { hasFullImage, thumbSrc } from '@/lib/atelier/session-store'
 import type { GalleryItem } from '@/lib/types'
+
+/** Plafond de la planche, nommé plutôt que subi. */
+const SHEET_SIZE = 8
 
 interface ProduceProps {
   items: GalleryItem[]
@@ -18,7 +23,10 @@ export default function Produce({
   onSelectAll,
   onExport,
 }: ProduceProps) {
-  const sheet = items.slice(0, 8)
+  const sheet = items.slice(0, SHEET_SIZE)
+  const previewOnly = sheet.filter(
+    (item) => selection.includes(item.id) && !hasFullImage(item)
+  ).length
 
   if (sheet.length === 0) {
     return (
@@ -33,7 +41,8 @@ export default function Produce({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="font-mono text-[10px] tracking-[.1em] text-label">
           PLANCHE — {selection.length} SÉLECTIONNÉE{selection.length > 1 ? 'S' : ''} SUR{' '}
-          {sheet.length}
+          {sheet.length} ({SHEET_SIZE} PREMIÈRES DE LA SESSION)
+          {previewOnly > 0 && ` · ${previewOnly} EN APERÇU, SANS FICHIER`}
         </p>
         <div className="flex items-center gap-[6px]">
           <button
@@ -42,7 +51,7 @@ export default function Produce({
             className="flex items-center gap-[6px] rounded-chip bg-field px-[10px] py-[6px] text-[12px] text-body-soft transition-colors duration-[240ms] hover:bg-field-hover"
           >
             <SelectionAll size={14} />
-            Tout sélectionner
+            Sélectionner les {SHEET_SIZE}
           </button>
           <button
             type="button"
@@ -66,11 +75,18 @@ export default function Produce({
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={`data:${item.result.mimeType};base64,${item.result.imageBase64}`}
+                src={thumbSrc(item)}
                 alt={item.prompt}
+                loading="lazy"
+                decoding="async"
                 className="h-full w-full object-cover"
               />
               <span className="hatch pointer-events-none absolute inset-0" />
+              {!hasFullImage(item) && (
+                <span className="absolute left-2 top-2">
+                  <PreviewBadge />
+                </span>
+              )}
 
               <button
                 type="button"

@@ -106,22 +106,32 @@ interface CompareProps {
   onKeep: (item: GalleryItem) => void
   onDecline: (item: GalleryItem) => void
   onRerun: () => void
+  onExit: () => void
 }
 
-export default function Compare({ ab, onKeep, onDecline, onRerun }: CompareProps) {
+export default function Compare({ ab, onKeep, onDecline, onRerun, onExit }: CompareProps) {
   const total = (ab.a?.costEur ?? 0) + (ab.b?.costEur ?? 0)
 
   return (
     <div className="flex h-full flex-col gap-[10px]">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <span className="font-mono text-[10.5px] text-meta">total {formatEur(total)}</span>
-        <button
-          type="button"
-          onClick={onRerun}
-          className="rounded-chip bg-field px-[10px] py-[6px] text-[12px] text-body-soft transition-colors duration-[240ms] hover:bg-field-hover"
-        >
-          Relancer les deux
-        </button>
+        <div className="flex shrink-0 items-center gap-[6px]">
+          <button
+            type="button"
+            onClick={onExit}
+            className="whitespace-nowrap rounded-chip bg-field px-[10px] py-[6px] text-[12px] text-body-soft transition-colors duration-[240ms] hover:bg-field-hover"
+          >
+            Quitter la comparaison
+          </button>
+          <button
+            type="button"
+            onClick={onRerun}
+            className="whitespace-nowrap rounded-chip bg-field px-[10px] py-[6px] text-[12px] text-body-soft transition-colors duration-[240ms] hover:bg-field-hover"
+          >
+            Relancer les deux
+          </button>
+        </div>
       </div>
 
       <div className="flex min-h-0 flex-1 gap-[13px]">

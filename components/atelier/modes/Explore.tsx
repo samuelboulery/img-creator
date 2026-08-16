@@ -2,11 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { ArrowsOut, Sparkle, SquaresFour } from '@phosphor-icons/react/dist/ssr'
+import PreviewBadge from '@/components/atelier/PreviewBadge'
+import { hasFullImage, imageSrc, thumbSrc } from '@/lib/atelier/session-store'
 import type { GalleryItem, PendingTile } from '@/lib/types'
-
-function dataUrl(item: GalleryItem): string {
-  return `data:${item.result.mimeType};base64,${item.result.imageBase64}`
-}
 
 function Seconds({ startedAt }: { startedAt: number }) {
   const [now, setNow] = useState(() => Date.now())
@@ -21,7 +19,7 @@ function Seconds({ startedAt }: { startedAt: number }) {
 
 function PendingCell({ tile }: { tile: PendingTile }) {
   return (
-    <div className="relative overflow-hidden rounded-rail bg-tile">
+    <div className="relative aspect-square overflow-hidden rounded-rail bg-tile">
       <div
         className="absolute inset-0 animate-shimmer"
         style={{
@@ -68,10 +66,18 @@ function ImageButton({
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      className={`group relative overflow-hidden rounded-rail ${selected ? 'ring-visual' : ''}`}
+      className={`group relative aspect-square overflow-hidden rounded-rail ${
+        selected ? 'ring-visual' : ''
+      }`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={dataUrl(item)} alt={item.prompt} className="h-full w-full object-cover" />
+      <img
+        src={thumbSrc(item)}
+        alt={item.prompt}
+        loading="lazy"
+        decoding="async"
+        className="h-full w-full object-cover"
+      />
       <span className="hatch pointer-events-none absolute inset-0" />
     </button>
   )
@@ -112,13 +118,12 @@ export default function Explore({
   if (items.length === 0 && pending.length === 0) return <EmptyState />
 
   const hero = items.find((item) => item.id === selectedId) ?? items[0]
-  const others = items.filter((item) => item.id !== hero?.id)
-  const thumbs = others.slice(0, Math.max(0, 4 - pending.length))
+  const thumbs = items.filter((item) => item.id !== hero?.id)
 
   return (
-    <div className="grid h-full grid-cols-[1.62fr_1fr_1fr] grid-rows-2 gap-[13px]">
+    <div className="flex h-full gap-[13px]">
       {hero && (
-        <div className="relative col-start-1 row-span-2 overflow-hidden rounded-rail ring-visual">
+        <div className="relative flex-[1.62] overflow-hidden rounded-rail ring-visual">
           <button
             type="button"
             onClick={onEnlarge}
@@ -126,11 +131,12 @@ export default function Explore({
             aria-label="Agrandir l'image sélectionnée"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={dataUrl(hero)} alt={hero.prompt} className="h-full w-full object-cover" />
+            <img src={imageSrc(hero)} alt={hero.prompt} className="h-full w-full object-cover" />
             <span className="hatch pointer-events-none absolute inset-0" />
           </button>
 
           <div className="pointer-events-none absolute left-[14px] right-[14px] top-[14px] flex flex-wrap items-center gap-2">
+            {!hasFullImage(hero) && <PreviewBadge />}
             {hero.seed !== null && (
               <span className="rounded-pill bg-app/60 px-2 py-[5px] font-mono text-[10.5px] text-mono backdrop-blur-[10px]">
                 seed {hero.seed}
@@ -160,18 +166,23 @@ export default function Explore({
         </div>
       )}
 
-      {thumbs.map((item) => (
-        <ImageButton
-          key={item.id}
-          item={item}
-          selected={item.id === selectedId}
-          onSelect={() => onSelect(item.id)}
-        />
-      ))}
+      {/* Toute la session tient ici : la colonne défile plutôt que de tronquer. */}
+      <div className="min-w-0 flex-1 overflow-y-auto">
+        <div className="grid grid-cols-2 content-start gap-[13px]">
+          {pending.map((tile) => (
+            <PendingCell key={tile.id} tile={tile} />
+          ))}
 
-      {pending.map((tile) => (
-        <PendingCell key={tile.id} tile={tile} />
-      ))}
+          {thumbs.map((item) => (
+            <ImageButton
+              key={item.id}
+              item={item}
+              selected={item.id === selectedId}
+              onSelect={() => onSelect(item.id)}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

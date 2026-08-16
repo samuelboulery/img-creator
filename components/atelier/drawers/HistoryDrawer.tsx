@@ -1,6 +1,7 @@
 'use client'
 
 import { buildLineage, shortId } from '@/lib/atelier/diff'
+import { thumbSrc } from '@/lib/atelier/session-store'
 import type { GalleryItem } from '@/lib/types'
 
 interface HistoryDrawerProps {
@@ -48,11 +49,13 @@ export default function HistoryDrawer({ items, selectedId, onSelect }: HistoryDr
                 current ? 'bg-accent' : 'bg-separator'
               }`}
             />
-            {item.result.imageBase64 ? (
+            {thumbSrc(item) ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={`data:${item.result.mimeType};base64,${item.result.imageBase64}`}
+                src={thumbSrc(item)}
                 alt=""
+                loading="lazy"
+                decoding="async"
                 className="h-[34px] w-[34px] shrink-0 rounded-switch object-cover"
               />
             ) : (

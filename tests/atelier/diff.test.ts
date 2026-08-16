@@ -13,6 +13,7 @@ function item(id: string, parentId: string | null, createdAt: string): GalleryIt
     seed: null,
     params: DEFAULT_PARAMS,
     palette: null,
+    thumb: null,
     parentId,
     recipeId: null,
     latencyMs: 0,

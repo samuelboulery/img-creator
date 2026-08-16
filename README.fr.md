@@ -12,7 +12,9 @@ Un prompt, plusieurs modèles côte à côte — pas de compte, pas de base de d
 
 [Démarrage](#démarrage) · [Pourquoi](#pourquoi) · [Modèles](#modèles) · [Fonctionnement](#fonctionnement) · [English](README.md)
 
-<img src="docs/screenshot.png" alt="L'atelier img-creator : rail d'outils, canvas, composer et panneau de réglages" width="900">
+<img src="docs/screenshot.png" alt="L'atelier img-creator : rail d'outils, canvas rempli d'une session de 24 images, composer et panneau de réglages" width="900">
+
+<sub>Session de démonstration : les visuels sont des photos libres de droit, pas des sorties de modèle. Regénérer les captures avec <code>node scripts/screenshots.mjs</code>.</sub>
 
 </div>
 

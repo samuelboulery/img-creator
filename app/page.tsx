@@ -8,6 +8,7 @@ import {
   FileArrowDown,
   GitBranch,
   GridFour,
+  Images,
   SlidersHorizontal,
   Sparkle,
   SquareSplitHorizontal,
@@ -36,6 +37,7 @@ import RecipeTab from '@/components/atelier/panel/RecipeTab'
 import SettingsPanel from '@/components/atelier/panel/SettingsPanel'
 import { downloadImage, downloadJson, exportSheet } from '@/lib/atelier/export'
 import { createRecipe, serializeRecipes } from '@/lib/atelier/recipes'
+import { seedSession } from '@/lib/atelier/seed'
 import { toReferenceImage } from '@/lib/atelier/image-file'
 import { isPanelVisible } from '@/lib/atelier/reducer'
 import { useAtelier } from '@/lib/atelier/use-atelier'
@@ -154,6 +156,17 @@ export default function Home() {
         },
       },
       {
+        id: 'seed-session',
+        label: '(dev) Charger 24 images de démo',
+        icon: Images,
+        run: () => {
+          void seedSession().then((seeded) => {
+            atelier.setItems(seeded)
+            dispatch({ type: 'select', id: seeded[0]?.id ?? null })
+          })
+        },
+      },
+      {
         id: 'simulate-error',
         label: "(dev) Simuler un échec d'API",
         icon: WarningCircle,
@@ -170,9 +183,19 @@ export default function Home() {
 
   const needsOnboarding = atelier.onboarding
 
+  // Le plafond de stockage se dit à voix haute : sans ça, l'utilisateur croit
+  // que toute la session revient après un rechargement.
+  const { kept, fullCount } = atelier.persisted
+  const storageLabel =
+    kept < items.length
+      ? `${kept} gardée${kept > 1 ? 's' : ''} · ${fullCount} en pleine déf`
+      : fullCount < kept
+        ? `${fullCount}/${kept} en pleine déf`
+        : 'session locale'
+
   const counterLabel =
     items.length > 0
-      ? `${items.length} variante${items.length > 1 ? 's' : ''} · session locale`
+      ? `${items.length} variante${items.length > 1 ? 's' : ''} · ${storageLabel}`
       : 'session locale'
 
   return (
@@ -191,10 +214,15 @@ export default function Home() {
           openDrawer={state.openDrawer}
           usagePercent={0}
           usageEur={items.reduce((total, item) => total + item.costEur, 0)}
-          onNewGeneration={() => dispatch({ type: 'closeDrawer' })}
+          onNewGeneration={() => {
+            dispatch({ type: 'setMode', mode: 'explore' })
+            dispatch({ type: 'closeDrawer' })
+          }}
           onToggleDrawer={(drawer) => dispatch({ type: 'toggleDrawer', drawer })}
           onCompare={() => {
-            dispatch({ type: 'setMode', mode: 'ab' })
+            // ponytail: la sortie retombe toujours sur « explorer » ; mémoriser le
+            // mode précédent demanderait un champ de plus dans le reducer.
+            dispatch({ type: 'setMode', mode: state.mode === 'ab' ? 'explore' : 'ab' })
             dispatch({ type: 'closeDrawer' })
           }}
         />
@@ -219,6 +247,9 @@ export default function Home() {
                 onApply={atelier.applyRecipe}
                 onSaveCurrent={atelier.saveCurrentRecipe}
                 onImport={atelier.setRecipes}
+                onDelete={(id) =>
+                  atelier.setRecipes(atelier.recipes.filter((entry) => entry.id !== id))
+                }
               />
             ) : state.openDrawer === 'history' ? (
               <HistoryDrawer
@@ -302,6 +333,7 @@ export default function Home() {
                   })
                 }
                 onRerun={() => void atelier.compare(atelier.prompt)}
+                onExit={() => dispatch({ type: 'setMode', mode: 'explore' })}
               />
             )}
           </div>
