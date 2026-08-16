@@ -59,6 +59,11 @@ export default function RootLayout({
       className={`${spaceGrotesk.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="h-full bg-app text-body">{children}</body>
+      <script
+        defer
+        src="https://static.cloudflareinsights.com/beacon.min.js"
+        data-cf-beacon='{"token": "ef321ec6f5fa4044a696cecef364fedf"}'
+      />
     </html>
   )
 }

@@ -48,3 +48,7 @@ next-env.d.ts
 # session, hors sujet pour un dépôt public — gardé sur disque, hors de git.
 /ovrsee/
 /ovrsee.config.json
+
+# Captures d'écran ovrsee : régénérées à chaque commit, purge auto côté
+# disque (30j puis 1/semaine) — inutile de les suivre dans git.
+ovrsee/pages/shots/
