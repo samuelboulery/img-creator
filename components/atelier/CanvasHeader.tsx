@@ -6,6 +6,7 @@ const SEGMENTS: { mode: Mode; label: string }[] = [
   { mode: 'explore', label: 'Explorer' },
   { mode: 'iterate', label: 'Itérer' },
   { mode: 'produce', label: 'Produire' },
+  { mode: 'ab', label: 'Comparer' },
 ]
 
 interface CanvasHeaderProps {

@@ -35,7 +35,7 @@ test("sans clé, l'écran d'accueil s'affiche et laisse entrer", async ({ page }
   await dialog.getByRole('button', { name: "Entrer dans l'atelier" }).click()
 
   await expect(dialog).toBeHidden()
-  await expect(page.getByRole('navigation', { name: 'Outils' })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Panneaux' })).toBeVisible()
 })
 
 test('une génération remplit le canvas et le compteur', async ({ page }) => {

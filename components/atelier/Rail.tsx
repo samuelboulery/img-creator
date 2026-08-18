@@ -3,12 +3,10 @@
 import {
   Books,
   ClockCounterClockwise,
-  PlusCircle,
   SlidersHorizontal,
-  SquareSplitHorizontal,
 } from '@phosphor-icons/react/dist/ssr'
 import type { Icon } from '@phosphor-icons/react'
-import type { DrawerId, Mode } from '@/lib/types'
+import type { DrawerId } from '@/lib/types'
 
 interface RailButtonProps {
   icon: Icon
@@ -18,6 +16,9 @@ interface RailButtonProps {
 }
 
 /**
+ * Le rail n'ouvre que des panneaux : aucun de ses boutons ne change la vue
+ * principale — les modes vivent dans le segmented control du CanvasHeader.
+ *
  * Règle d'état actif valable dans tout l'atelier : variante `fill` + ambre
  * clair sur fond `rail-active`, sinon `regular` + gris d'icône sur transparent.
  */
@@ -68,27 +69,21 @@ function UsageGauge({ percent, amountEur }: UsageGaugeProps) {
 }
 
 interface RailProps {
-  mode: Mode
   openDrawer: DrawerId | null
   usagePercent: number
   usageEur: number
-  onNewGeneration: () => void
   onToggleDrawer: (drawer: DrawerId) => void
-  onCompare: () => void
 }
 
 export default function Rail({
-  mode,
   openDrawer,
   usagePercent,
   usageEur,
-  onNewGeneration,
   onToggleDrawer,
-  onCompare,
 }: RailProps) {
   return (
     <nav
-      aria-label="Outils"
+      aria-label="Panneaux"
       className="flex w-rail shrink-0 flex-col items-center gap-3 py-4"
     >
       {/* Marque */}
@@ -104,12 +99,6 @@ export default function Rail({
 
       <div className="mt-2 flex flex-col items-center gap-[6px]">
         <RailButton
-          icon={PlusCircle}
-          label="Nouvelle génération"
-          active={openDrawer === null && mode !== 'ab'}
-          onClick={onNewGeneration}
-        />
-        <RailButton
           icon={ClockCounterClockwise}
           label="Historique"
           active={openDrawer === 'history'}
@@ -121,32 +110,18 @@ export default function Rail({
           active={openDrawer === 'recipes'}
           onClick={() => onToggleDrawer('recipes')}
         />
-        <RailButton
-          icon={SquareSplitHorizontal}
-          label="Comparer deux modèles"
-          active={mode === 'ab'}
-          onClick={onCompare}
-        />
       </div>
 
       <div className="flex-1" />
 
       <UsageGauge percent={usagePercent} amountEur={usageEur} />
 
-      <button
-        type="button"
+      <RailButton
+        icon={SlidersHorizontal}
+        label="Clés & préférences"
+        active={openDrawer === 'settings'}
         onClick={() => onToggleDrawer('settings')}
-        title="Réglages"
-        aria-label="Réglages"
-        aria-pressed={openDrawer === 'settings'}
-        className={`mt-1 flex h-[34px] w-[34px] items-center justify-center rounded-chip transition-colors duration-[240ms] ${
-          openDrawer === 'settings'
-            ? 'bg-rail-active text-accent-light'
-            : 'text-icon hover:bg-field-hover'
-        }`}
-      >
-        <SlidersHorizontal size={18} weight={openDrawer === 'settings' ? 'fill' : 'regular'} />
-      </button>
+      />
     </nav>
   )
 }
