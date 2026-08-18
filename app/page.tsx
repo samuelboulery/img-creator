@@ -47,7 +47,7 @@ const DRAWER_TITLES: Record<DrawerId, string> = {
   history: 'Historique',
   recipes: 'Bibliothèque de recettes',
   enrich: 'Enrichissement du prompt',
-  settings: 'Réglages',
+  settings: 'Clés & préférences',
 }
 
 export default function Home() {
@@ -117,7 +117,7 @@ export default function Home() {
       },
       {
         id: 'settings',
-        label: 'Réglages & clés API',
+        label: 'Clés & préférences',
         icon: SlidersHorizontal,
         run: () => dispatch({ type: 'toggleDrawer', drawer: 'settings' }),
       },
@@ -210,21 +210,10 @@ export default function Home() {
 
       <div className="relative flex h-full gap-[10px] p-[10px]">
         <Rail
-          mode={state.mode}
           openDrawer={state.openDrawer}
           usagePercent={0}
           usageEur={items.reduce((total, item) => total + item.costEur, 0)}
-          onNewGeneration={() => {
-            dispatch({ type: 'setMode', mode: 'explore' })
-            dispatch({ type: 'closeDrawer' })
-          }}
           onToggleDrawer={(drawer) => dispatch({ type: 'toggleDrawer', drawer })}
-          onCompare={() => {
-            // ponytail: la sortie retombe toujours sur « explorer » ; mémoriser le
-            // mode précédent demanderait un champ de plus dans le reducer.
-            dispatch({ type: 'setMode', mode: state.mode === 'ab' ? 'explore' : 'ab' })
-            dispatch({ type: 'closeDrawer' })
-          }}
         />
 
         {state.openDrawer && (
