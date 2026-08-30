@@ -1,7 +1,9 @@
 import { GoogleGenAI } from '@google/genai'
 import OpenAI from 'openai'
 import { NextRequest, NextResponse } from 'next/server'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { isJsonRequest, isSameOrigin } from '@/lib/origin-guard'
+import { MAX_PROMPT_CHARS } from '@/lib/adapters/validate'
+import { checkRateLimit, clientKey } from '@/lib/rate-limit'
 
 export interface EnrichRequest {
   prompt: string
@@ -20,8 +22,18 @@ const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini'
 const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash'
 
 export async function POST(req: NextRequest): Promise<NextResponse<EnrichResponse>> {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'local'
-  const { allowed, retryAfter } = checkRateLimit(ip)
+  if (!isSameOrigin(req)) {
+    return NextResponse.json({ success: false, error: 'Origine refusée' }, { status: 403 })
+  }
+
+  if (!isJsonRequest(req)) {
+    return NextResponse.json(
+      { success: false, error: 'Content-Type attendu : application/json' },
+      { status: 415 }
+    )
+  }
+
+  const { allowed, retryAfter } = checkRateLimit(clientKey(req))
 
   if (!allowed) {
     return NextResponse.json(
@@ -53,6 +65,19 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnrichRespons
       { success: false, error: 'prompt et prePrompt sont requis' },
       { status: 400 }
     )
+  }
+
+  if (body.prompt.length > MAX_PROMPT_CHARS || body.prePrompt.length > MAX_PROMPT_CHARS) {
+    return NextResponse.json(
+      { success: false, error: `prompt et prePrompt sont limités à ${MAX_PROMPT_CHARS} caractères` },
+      { status: 400 }
+    )
+  }
+
+  // Le modèle est repris tel quel dans l'appel amont : le borner évite qu'une
+  // valeur hostile choisisse un modèle arbitraire sur la clé de l'utilisateur.
+  if (body.model !== undefined && (typeof body.model !== 'string' || body.model.length > 100)) {
+    return NextResponse.json({ success: false, error: 'model invalide' }, { status: 400 })
   }
 
   try {
