@@ -49,13 +49,13 @@ export default function Onboarding({ keys, onKeyChange, onEnter }: OnboardingPro
   useFocusTrap(dialogRef)
 
   return (
-    <div className="absolute inset-0 z-[60] bg-[rgb(6_8_11/0.78)] backdrop-blur-[22px]">
+    <div className="absolute inset-0 z-[60] overflow-y-auto bg-[rgb(6_8_11/0.78)] backdrop-blur-[22px]">
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Connecte un modèle"
-        className="mx-auto mt-[96px] w-[460px] rounded-panel border border-line bg-panel/72 p-7 backdrop-blur-[28px]"
+        className="mx-auto my-[48px] w-full max-w-[460px] rounded-panel border border-line bg-panel/72 p-7 backdrop-blur-[28px] max-[520px]:my-[24px] max-[520px]:w-[calc(100%-24px)] max-[520px]:p-5"
       >
         <span className="flex h-[36px] w-[36px] items-center justify-center rounded-chip bg-section">
           <Sparkle size={18} weight="fill" className="text-accent-light" />

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useReducer, useState } from 'react'
+import { classifyClientError } from './error-kind'
 import { estimateCost } from './cost'
 import { toImageState, toReferenceImage } from './image-file'
 import { extractPalette } from './palette'
@@ -312,8 +313,11 @@ export function useAtelier() {
       options.parentId ?? null
     )
 
-    if (error) dispatch({ type: 'setError', error })
-    else if (created[0]) dispatch({ type: 'select', id: created[0].id })
+    if (error) {
+      dispatch({ type: 'setError', error, kind: classifyClientError(error) })
+    } else if (created[0]) {
+      dispatch({ type: 'select', id: created[0].id })
+    }
 
     return created
   }

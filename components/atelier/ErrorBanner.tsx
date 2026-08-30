@@ -1,15 +1,26 @@
 'use client'
 
 import { WarningCircle, X } from '@phosphor-icons/react/dist/ssr'
+import type { ErrorKind } from '@/lib/atelier/reducer'
 
 interface ErrorBannerProps {
   /** Message exact renvoyé par l'API — il n'est ni reformulé ni tronqué. */
   message: string
+  /** Une clé manquante rend « Réessayer » inutile : on mène aux réglages. */
+  kind?: ErrorKind
   onRetry: () => void
+  onOpenSettings: () => void
   onDismiss: () => void
 }
 
-export default function ErrorBanner({ message, onRetry, onDismiss }: ErrorBannerProps) {
+export default function ErrorBanner({
+  message,
+  kind = 'generic',
+  onRetry,
+  onOpenSettings,
+  onDismiss,
+}: ErrorBannerProps) {
+  const missingKey = kind === 'missing-key'
   return (
     <div
       role="alert"
@@ -20,10 +31,10 @@ export default function ErrorBanner({ message, onRetry, onDismiss }: ErrorBanner
       <p className="flex-1 text-[12.5px] text-error-text">{message}</p>
       <button
         type="button"
-        onClick={onRetry}
+        onClick={missingKey ? onOpenSettings : onRetry}
         className="rounded-[8px] bg-error-button px-[10px] py-[5px] text-[12px] text-error-text transition-opacity duration-[240ms] hover:opacity-80"
       >
-        Réessayer
+        {missingKey ? 'Ouvrir les réglages' : 'Réessayer'}
       </button>
       <button
         type="button"
