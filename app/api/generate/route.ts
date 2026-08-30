@@ -2,12 +2,36 @@ import { NextRequest, NextResponse } from 'next/server'
 import { nanoBanana2Adapter } from '@/lib/adapters/nano-banana-2'
 import { gptImage2Adapter } from '@/lib/adapters/gpt-image-2'
 import { toClientMessage } from '@/lib/adapters/errors'
-import { checkRateLimit } from '@/lib/rate-limit'
-import type { GenerateResponse, GenerationRequest } from '@/lib/types'
+import {
+  BadRequestError,
+  PayloadTooLargeError,
+  parseGenerationRequest,
+} from '@/lib/adapters/validate'
+import { isJsonRequest, isSameOrigin } from '@/lib/origin-guard'
+import { checkRateLimit, clientKey } from '@/lib/rate-limit'
+import type { AdapterId, GenerateImageAdapter, GenerateResponse } from '@/lib/types'
+
+const ADAPTERS: Record<AdapterId, GenerateImageAdapter> = {
+  'nano-banana-2': nanoBanana2Adapter,
+  'gpt-image-2': gptImage2Adapter,
+}
+
+/** Une génération 4K peut être longue ; au-delà, la connexion est perdue pour rien. */
+const UPSTREAM_TIMEOUT_MS = 120_000
 
 export async function POST(req: NextRequest): Promise<NextResponse<GenerateResponse>> {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'local'
-  const { allowed, retryAfter } = checkRateLimit(ip)
+  if (!isSameOrigin(req)) {
+    return NextResponse.json({ success: false, error: 'Origine refusée' }, { status: 403 })
+  }
+
+  if (!isJsonRequest(req)) {
+    return NextResponse.json(
+      { success: false, error: 'Content-Type attendu : application/json' },
+      { status: 415 }
+    )
+  }
+
+  const { allowed, retryAfter } = checkRateLimit(clientKey(req))
 
   if (!allowed) {
     return NextResponse.json(
@@ -16,29 +40,41 @@ export async function POST(req: NextRequest): Promise<NextResponse<GenerateRespo
     )
   }
 
-  let body: GenerationRequest
+  let raw: unknown
 
   try {
-    body = await req.json()
+    raw = await req.json()
   } catch {
     return NextResponse.json({ success: false, error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  if (!body.prompt?.trim()) {
-    return NextResponse.json({ success: false, error: 'prompt is required' }, { status: 400 })
-  }
-
-  if (!body.params) {
-    return NextResponse.json({ success: false, error: 'params is required' }, { status: 400 })
+  // Le typage de `req.json()` ne vaut rien à l'exécution : tout est vérifié ici.
+  let body
+  try {
+    body = parseGenerationRequest(raw)
+  } catch (err) {
+    if (err instanceof BadRequestError || err instanceof PayloadTooLargeError) {
+      return NextResponse.json({ success: false, error: err.message }, { status: err.status })
+    }
+    throw err
   }
 
   // Un en-tête présent mais vide vaut '' : `??` le laisserait passer et il
   // masquerait alors le repli serveur de l'adapter.
   const apiKey = req.headers.get('x-api-key')?.trim() || undefined
-  const adapter = body.adapterId === 'gpt-image-2' ? gptImage2Adapter : nanoBanana2Adapter
+  const adapter = ADAPTERS[body.adapterId]
 
   try {
-    const results = await adapter.generate(body, apiKey)
+    const results = await Promise.race([
+      adapter.generate(body, apiKey),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error('Délai dépassé par le modèle')),
+          UPSTREAM_TIMEOUT_MS
+        )
+      ),
+    ])
+
     return NextResponse.json({ success: true, data: results })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

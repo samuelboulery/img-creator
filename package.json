@@ -1,5 +1,16 @@
 {
   "packageManager": "pnpm@10.12.1",
+  "pnpm": {
+    "//": "Overrides de sécurité : ces paquets sont épinglés en version vulnérable par leurs parents. `pnpm audit --prod` est vert ; les avis restants (brace-expansion) n'arrivent que par la chaîne ESLint — outillage de dev, jamais livré — où minimatch@3 attend l'API v1 du paquet, si bien que forcer la v5 casse ESLint. Ils partiront avec la montée d'ESLint.",
+    "overrides": {
+      "protobufjs": ">=7.5.6",
+      "postcss": ">=8.5.23",
+      "ws": ">=8.21.0",
+      "js-yaml": ">=4.3.1",
+      "sharp": ">=0.35.0",
+      "@babel/core": ">=7.29.6"
+    }
+  },
   "name": "img-creator",
   "version": "0.1.0",
   "private": true,
