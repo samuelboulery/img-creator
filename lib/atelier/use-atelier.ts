@@ -2,6 +2,7 @@
 
 import { useEffect, useReducer, useState } from 'react'
 import { classifyClientError } from './error-kind'
+import { drawSeed, resolveSeed } from '@/lib/adapters/shared'
 import { estimateCost } from './cost'
 import { toImageState, toReferenceImage } from './image-file'
 import { extractPalette } from './palette'
@@ -198,10 +199,15 @@ export function useAtelier() {
     return keys[KEY_OF_ADAPTER[adapterId]].trim().length > 0
   }
 
-  function buildRequest(text: string, adapterId: AdapterId = state.adapterId): GenerationRequest {
+  function buildRequest(
+    text: string,
+    adapterId: AdapterId = state.adapterId,
+    drawnSeed: number | null = null
+  ): GenerationRequest {
     return {
       adapterId,
       prompt: text,
+      drawnSeed,
       negative: negative.trim() || undefined,
       promptSuffix: promptSuffix.trim() || undefined,
       recipeNegative: activeRecipe?.negative,
@@ -251,6 +257,11 @@ export function useAtelier() {
     const tile: PendingTile = { id: crypto.randomUUID(), startedAt: Date.now() }
     setPending((previous) => [...previous, tile])
 
+    // Tirée ici, une fois : le corps envoyé et la graine notée sur l'item sont
+    // la même valeur, et une image non verrouillée reste reproductible.
+    const drawnSeed = drawSeed()
+    const effectiveSeed = resolveSeed(params, drawnSeed)
+
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
     const key = keys[KEY_OF_ADAPTER[adapterId]]
     if (key) headers['x-api-key'] = key
@@ -259,7 +270,7 @@ export function useAtelier() {
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers,
-        body: JSON.stringify(buildRequest(text, adapterId)),
+        body: JSON.stringify(buildRequest(text, adapterId, drawnSeed)),
       })
 
       const json: GenerateResponse = await response.json()
@@ -272,7 +283,7 @@ export function useAtelier() {
         adapterId,
         prompt: text,
         negative: negative.trim(),
-        seed: params.seedLock ? params.seed : null,
+        seed: effectiveSeed,
         params,
         palette: null,
         thumb: null,

@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai'
+import { pruneUnsupported } from './capabilities'
 import { composePrompt, mergeExtraParams, mergeNegatives, resolveSeed } from './shared'
 import type {
   GenerateImageAdapter,
@@ -23,7 +24,13 @@ function imagePart(image: ReferenceImage, weight: number) {
  * Corps exact envoyé au modèle. Fonction pure : le panneau JSON affiche son
  * résultat, `generate()` l'envoie — il n'y a pas deux vérités.
  */
-export function buildNanoBanana2Payload(request: GenerationRequest): object {
+export type NanoBanana2Payload = {
+  model: string
+  contents: { role: string; parts: object[] }[]
+  config: Record<string, unknown>
+} & Record<string, unknown>
+
+export function buildNanoBanana2Payload(request: GenerationRequest): NanoBanana2Payload {
   const { params } = request
   const negative = mergeNegatives(request.negative, request.recipeNegative)
   const connector = params.language === 'en' ? 'Avoid:' : 'À éviter :'
@@ -51,11 +58,13 @@ export function buildNanoBanana2Payload(request: GenerationRequest): object {
       candidateCount: params.batch,
       imageConfig: { aspectRatio: params.aspectRatio, imageSize: params.resolution },
       personGeneration: params.personGeneration,
-      seed: resolveSeed(params),
+      seed: resolveSeed(params, request.drawnSeed ?? null),
     },
   }
 
-  return mergeExtraParams(payload, params.extraParams)
+  // `capabilities.ts` décide de ce qui part : le badge « ignoré ici » et
+  // l'élagage viennent désormais de la même table.
+  return mergeExtraParams(pruneUnsupported('nano-banana-2', payload), params.extraParams)
 }
 
 export const nanoBanana2Adapter: GenerateImageAdapter = {

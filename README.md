@@ -34,8 +34,8 @@ img-creator does the opposite. **The JSON tab shows the real request body**, bui
 
 - **Two models, one prompt** — `nano-banana-2` (Gemini 3.1 Flash Image) and `gpt-image-2`, with an A/B mode that runs both in parallel on identical input.
 - **Four working modes** — *Explore* (fan out), *Iterate* (refine one result), *Produce* (contact sheet), *Compare* (A/B two models).
-- **Honest payloads** — every adapter exposes a pure `buildPayload()`. The inspector renders that exact object, never a reconstruction.
-- **Per-model capabilities** — a single source of truth (`lib/adapters/capabilities.ts`) drives both payload pruning and the "ignored here" badges.
+- **Honest payloads** — every adapter exposes a genuinely pure `buildPayload()`: no randomness, no clock, so the inspector renders the exact object that will be sent. The seed is drawn once by the caller and travels with the request, then is stored on the resulting image — an unlocked generation stays reproducible.
+- **Per-model capabilities** — a single source of truth (`lib/adapters/capabilities.ts`) drives both payload pruning and the "ignored here" badges. Removing an entry from the table removes the field from the wire *and* fails a contract test; the badge can no longer lie.
 - **Recipes** — save references, weights, prompt suffix, negative and render settings as a reusable preset. Export and import as plain `.json`.
 - **Subject & style references** — drag images in, weight them from *inspiration* to *reproduction*, lock identity, transfer palette.
 - **Prompt enrichment** — rewrite a prompt through a text model using *your* key. No server key is ever used for this.

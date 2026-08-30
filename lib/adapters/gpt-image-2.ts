@@ -1,4 +1,5 @@
 import OpenAI, { toFile } from 'openai'
+import { pruneUnsupported } from './capabilities'
 import { composePrompt, mergeExtraParams, mergeNegatives } from './shared'
 import type {
   GenerateImageAdapter,
@@ -24,8 +25,26 @@ const QUALITIES: Record<Resolution, string> = {
   '4K': 'high',
 }
 
+/**
+ * Corps envoyé à OpenAI. `mergeExtraParams` peut y ajouter des clés inconnues
+ * — d'où l'index signature, qui dit la vérité plutôt que de la masquer sous
+ * une assertion.
+ */
+export type GptImage2Payload = {
+  model: string
+  prompt: string
+  n: number
+  size: string
+  quality?: string
+  background?: string
+  output_format?: string
+  output_compression?: number | null
+  moderation?: string
+  image: string[]
+} & Record<string, unknown>
+
 /** Corps exact envoyé au modèle — même fonction pour l'envoi et pour l'onglet JSON. */
-export function buildGptImage2Payload(request: GenerationRequest): object {
+export function buildGptImage2Payload(request: GenerationRequest): GptImage2Payload {
   const { params } = request
   const negative = mergeNegatives(request.negative, request.recipeNegative)
   const connector = params.language === 'fr' ? 'À éviter :' : 'Avoid:'
@@ -55,20 +74,7 @@ export function buildGptImage2Payload(request: GenerationRequest): object {
     image: references.map((image) => image.base64),
   }
 
-  return mergeExtraParams(payload, params.extraParams)
-}
-
-type OpenAIPayload = {
-  model: string
-  prompt: string
-  n: number
-  size: string
-  quality: string
-  background: string
-  output_format: string
-  output_compression: number | null
-  moderation: string
-  image: string[]
+  return mergeExtraParams(pruneUnsupported('gpt-image-2', payload), params.extraParams)
 }
 
 async function referenceToFile(image: ReferenceImage, name: string) {
@@ -88,12 +94,14 @@ export const gptImage2Adapter: GenerateImageAdapter = {
     }
 
     const openai = new OpenAI({ apiKey })
-    const payload = buildGptImage2Payload(request) as OpenAIPayload
+    const payload = buildGptImage2Payload(request)
 
     const references = [...(request.subjectImages ?? []), ...(request.styleImages ?? [])]
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const common: any = {
+    // `images.generate` et `images.edit` ont des signatures distinctes : les
+    // champs communs sont typés une fois, chaque appel reçoit les siens. Le
+    // `any` précédent masquait cette divergence au lieu de la traiter.
+    const common = {
       model: payload.model,
       prompt: payload.prompt,
       n: payload.n,
@@ -101,11 +109,12 @@ export const gptImage2Adapter: GenerateImageAdapter = {
       quality: payload.quality,
       output_format: payload.output_format,
       moderation: payload.moderation,
-      ...(payload.output_compression !== null && {
-        output_compression: payload.output_compression,
-      }),
+      ...(payload.output_compression !== null &&
+        payload.output_compression !== undefined && {
+          output_compression: payload.output_compression,
+        }),
       ...(payload.background === 'transparent' && { background: 'transparent' }),
-    }
+    } satisfies Record<string, unknown>
 
     const response =
       references.length > 0
@@ -114,8 +123,10 @@ export const gptImage2Adapter: GenerateImageAdapter = {
             image: await Promise.all(
               references.map((image, index) => referenceToFile(image, `ref-${index}.png`))
             ),
-          })
-        : await openai.images.generate(common)
+          } as unknown as OpenAI.Images.ImageEditParamsNonStreaming)
+        : await openai.images.generate(
+            common as unknown as OpenAI.Images.ImageGenerateParamsNonStreaming
+          )
 
     const images: GenerationResult[] = (response.data ?? [])
       .filter((entry) => entry.b64_json)

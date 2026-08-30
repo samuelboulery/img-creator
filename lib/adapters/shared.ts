@@ -19,10 +19,26 @@ export function mergeNegatives(negative?: string, recipeNegative?: string): stri
   return [...seen.values()].join(', ')
 }
 
-/** Graine effective : celle du champ si elle est verrouillée, sinon un tirage. */
-export function resolveSeed(params: GenerationParams): number {
-  if (params.seedLock && params.seed !== null) return params.seed
+/**
+ * Tire une graine. Seul point d'aléatoire de la chaîne : il est appelé une fois
+ * par génération, côté appelant, jamais depuis `buildPayload`.
+ */
+export function drawSeed(): number {
   return Math.floor(1_000_000 + Math.random() * 9_000_000)
+}
+
+/**
+ * Graine effective : celle du champ si elle est verrouillée, sinon celle que
+ * l'appelant a tirée pour cet envoi.
+ *
+ * Cette fonction est pure — c'est ce qui permet à `buildPayload` de l'être, et
+ * donc à l'onglet JSON d'afficher exactement le corps qui partira. Tant que le
+ * tirage vivait ici, le panneau montrait une graine renouvelée à chaque rendu,
+ * qui n'était jamais celle envoyée au modèle.
+ */
+export function resolveSeed(params: GenerationParams, drawn: number | null): number | null {
+  if (params.seedLock && params.seed !== null) return params.seed
+  return drawn
 }
 
 /**

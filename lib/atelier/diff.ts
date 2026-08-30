@@ -1,4 +1,4 @@
-import { PARAM_LABELS, type PayloadParam } from '@/lib/adapters/capabilities'
+import { ALL_PARAMS, PARAM_LABELS, type PayloadParam } from '@/lib/adapters/capabilities'
 import type { GalleryItem, GenerationParams } from '@/lib/types'
 
 export type DiffKind = 'same' | 'added' | 'removed'
@@ -66,21 +66,12 @@ export interface ParamDelta {
   to: string
 }
 
-const COMPARED: PayloadParam[] = [
-  'aspectRatio',
-  'resolution',
-  'batch',
-  'seed',
-  'fileFormat',
-  'transparent',
-  'compression',
-  'guidance',
-  'steps',
-  'sampler',
-  'personGeneration',
-  'moderation',
-  'language',
-]
+/**
+ * Tous les réglages sauf les paramètres bruts, qui n'ont pas de valeur
+ * scalaire à comparer. Dérivé de `ALL_PARAMS` : ajouter un réglage le rend
+ * comparable sans qu'on ait à y penser.
+ */
+const COMPARED: readonly PayloadParam[] = ALL_PARAMS.filter((param) => param !== 'extraParams')
 
 function show(value: unknown): string {
   if (value === null) return 'aléatoire'
