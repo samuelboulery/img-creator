@@ -40,19 +40,55 @@ export function composePrompt(
 }
 
 /**
- * Les paramètres bruts sont fusionnés tels quels, en dernier : c'est la soupape
- * quand un modèle ouvre un champ que l'interface ne connaît pas encore.
+ * Champs structurants du corps amont : ils décident du modèle appelé, du
+ * nombre d'images produites et de la politique de modération. `extraParams`
+ * est une soupape pour les champs que l'interface ne connaît pas encore — pas
+ * un moyen de réécrire la requête. Sans cette liste, toute validation faite en
+ * amont (`lib/adapters/validate.ts`) serait contournable depuis le client.
+ */
+const RESERVED = new Set([
+  'model',
+  'contents',
+  'config',
+  'prompt',
+  'n',
+  'candidateCount',
+  'image',
+  'quality',
+  'size',
+  'moderation',
+  'background',
+  'output_format',
+  'output_compression',
+])
+
+/** Clés qui réassignent un prototype plutôt qu'une propriété. */
+const POISONED = new Set(['__proto__', 'constructor', 'prototype'])
+
+const MAX_EXTRAS = 20
+
+/**
+ * Les paramètres bruts sont fusionnés en dernier : c'est la soupape quand un
+ * modèle ouvre un champ que l'interface ne connaît pas encore. Les champs
+ * structurants en sont exclus — voir `RESERVED`.
  */
 export function mergeExtraParams<T extends object>(payload: T, extraParams: ExtraParam[]): T {
+  // Un `extraParams` non tabulaire ferait itérer `for…of` sur une chaîne, puis
+  // planter en déstructuration : la route répondrait 500 au lieu de 400.
+  if (!Array.isArray(extraParams)) return payload
+
   const extras: Record<string, unknown> = {}
 
-  for (const { key, value } of extraParams) {
-    const name = key.trim()
-    if (!name) continue
+  for (const entry of extraParams.slice(0, MAX_EXTRAS)) {
+    if (typeof entry?.key !== 'string' || typeof entry?.value !== 'string') continue
+
+    const name = entry.key.trim()
+    if (!name || RESERVED.has(name) || POISONED.has(name)) continue
+
     try {
-      extras[name] = JSON.parse(value)
+      extras[name] = JSON.parse(entry.value)
     } catch {
-      extras[name] = value
+      extras[name] = entry.value
     }
   }
 

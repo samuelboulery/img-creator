@@ -129,7 +129,11 @@ Nothing is stored outside your browser. `localStorage` holds:
 | `imgc.session` | current session, capped, images as base64 |
 | `imgc.params` · `imgc.prefs` · `imgc.onboarded` | settings and UI state |
 
-The API routes apply a naive in-memory rate limit (10 requests/minute per IP). It resets on restart and does not survive multiple instances — enough for a single self-hosted deployment, not for a public service.
+The API routes apply a naive in-memory rate limit (10 requests/minute). It resets on restart and does not survive multiple instances — enough for a single self-hosted deployment, not for a public service.
+
+`X-Forwarded-For` is only trusted when `TRUSTED_PROXY_COUNT` says how many proxies sit in front of the app; otherwise the header is ignored, since a client can forge it to get a fresh quota on every request.
+
+Both POST routes reject cross-origin requests (`Sec-Fetch-Site`, falling back to `Origin`) and anything that is not `application/json` — without that pair, a third-party page could spend a shared instance's fallback key through a simple no-preflight request. Every field of the request body is validated against an explicit allow-list before it reaches an adapter, and `extraParams` cannot overwrite structural fields such as `model`, `n` or `moderation`.
 
 ## Scripts
 

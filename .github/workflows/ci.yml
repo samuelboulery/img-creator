@@ -37,6 +37,11 @@ jobs:
         if: always()
       - run: pnpm build
 
+      # Les avis restants viennent de la chaîne ESLint (dev uniquement) ;
+      # `high` garde la porte fermée sans bloquer sur eux.
+      - run: pnpm audit --audit-level=high
+        if: always()
+
   e2e:
     # Ne pas brûler l'installation de Chromium quand les types sont cassés.
     needs: check

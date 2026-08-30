@@ -72,6 +72,7 @@ pnpm test:e2e         # Playwright (parcours critique)
 |---|---|---|
 | `GEMINI_API_KEY` | optionnel | Repli serveur pour nano-banana-2 si l'utilisateur n'a pas saisi de clé |
 | `OPENAI_API_KEY` | optionnel | Repli serveur pour gpt-image-2 |
+| `TRUSTED_PROXY_COUNT` | optionnel | Nombre de proxys de confiance devant l'app (défaut `0`). Tant qu'il vaut `0`, `X-Forwarded-For` est ignoré : un client peut le forger et se donner un quota neuf à chaque requête. |
 
 ## Notes API
 
