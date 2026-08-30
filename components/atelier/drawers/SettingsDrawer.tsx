@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { Eye, EyeSlash, Key } from '@phosphor-icons/react/dist/ssr'
 import Switch from '../panel/Switch'
+import { ADAPTERS } from '@/lib/adapters/capabilities'
 import type { Prefs } from '@/lib/atelier/storage'
-import type { AdapterId, KeyKind } from '@/lib/types'
+import type { KeyKind, AdapterId } from '@/lib/types'
 
 interface KeyCardProps {
   title: string
@@ -121,7 +122,7 @@ export default function SettingsDrawer({
 
         {editingPricing && (
           <div className="mt-[10px] space-y-[8px]">
-            {(['nano-banana-2', 'gpt-image-2'] as AdapterId[]).map((adapterId) => (
+            {ADAPTERS.map((adapterId) => (
               <label key={adapterId} className="flex items-center justify-between gap-2">
                 <span className="font-mono text-[10.5px] text-meta">{adapterId}</span>
                 <input

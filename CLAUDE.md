@@ -51,8 +51,8 @@ pnpm test:e2e         # Playwright (parcours critique)
 ## Code Conventions
 
 - Un adapter par API dans `lib/adapters/`, implémentant `GenerateImageAdapter`.
-- **Chaque adapter expose un `buildPayload` pur** : `generate()` l'envoie, l'onglet JSON l'affiche. Le panneau JSON montre le corps réel, jamais une reconstitution.
-- Les capacités par modèle vivent uniquement dans `lib/adapters/capabilities.ts` : elles pilotent à la fois l'élagage du payload et les badges `ignoré ici`.
+- **Chaque adapter expose un `buildPayload` pur** : `generate()` l'envoie, l'onglet JSON l'affiche. Le panneau JSON montre le corps réel, jamais une reconstitution. Pur au sens strict — aucun `Math.random()`, aucune horloge : la graine est tirée par l'appelant (`drawSeed()`) et voyage dans `GenerationRequest.drawnSeed`. Vérifié par `tests/adapters/capabilities.test.ts`.
+- Les capacités par modèle vivent uniquement dans `lib/adapters/capabilities.ts` : elles pilotent à la fois l'élagage du payload et les badges `ignoré ici`. L'élagage passe par `pruneUnsupported()`, que chaque `buildPayload` appelle ; retirer une entrée de `SUPPORTED` fait disparaître le champ du corps **et** échouer le test de contrat.
 - Les clés API ne transitent jamais côté client au sens « bundle » : elles sont saisies par l'utilisateur, gardées dans `localStorage` et envoyées en en-tête `x-api-key` vers `app/api/`.
 - Composants React en PascalCase, types partagés dans `lib/types.ts`.
 - TypeScript strict, pas de `any`. Immutabilité : aucune mutation d'objet d'état.
