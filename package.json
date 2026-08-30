@@ -1,7 +1,7 @@
 {
   "packageManager": "pnpm@10.12.1",
   "pnpm": {
-    "//": "Overrides de sécurité : ces paquets sont épinglés en version vulnérable par leurs parents. Restent hors périmètre les avis brace-expansion, qui n'arrivent que par la chaîne ESLint (outillage de dev, jamais livré au navigateur ni au serveur) : minimatch@3 attend l'API v1 de brace-expansion, et forcer la v5 casse ESLint. Ils partiront avec la montée d'ESLint.",
+    "//": "Overrides de sécurité : ces paquets sont épinglés en version vulnérable par leurs parents. `pnpm audit --prod` est vert ; les avis restants (brace-expansion) n'arrivent que par la chaîne ESLint — outillage de dev, jamais livré — où minimatch@3 attend l'API v1 du paquet, si bien que forcer la v5 casse ESLint. Ils partiront avec la montée d'ESLint.",
     "overrides": {
       "protobufjs": ">=7.5.6",
       "postcss": ">=8.5.23",
