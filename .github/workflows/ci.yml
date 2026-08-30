@@ -37,9 +37,10 @@ jobs:
         if: always()
       - run: pnpm build
 
-      # Les avis restants viennent de la chaîne ESLint (dev uniquement) ;
-      # `high` garde la porte fermée sans bloquer sur eux.
-      - run: pnpm audit --audit-level=high
+      # `--prod` : seul ce qui est réellement livré au navigateur et au
+      # serveur bloque. Les avis restants n'arrivent que par la chaîne ESLint,
+      # où minimatch@3 épingle brace-expansion en v1 — le forcer casse ESLint.
+      - run: pnpm audit --prod --audit-level=low
         if: always()
 
   e2e:
