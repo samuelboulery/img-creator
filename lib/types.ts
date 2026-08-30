@@ -1,3 +1,5 @@
+import type { ADAPTERS } from '@/lib/adapters/capabilities'
+
 export interface ReferenceImage {
   base64: string
   mimeType: string
@@ -8,7 +10,8 @@ export interface ExtraParam {
   value: string
 }
 
-export type AdapterId = 'nano-banana-2' | 'gpt-image-2'
+/** Dérivé de `ADAPTERS` (lib/adapters/capabilities.ts) : une seule liste. */
+export type AdapterId = (typeof ADAPTERS)[number]
 
 /** Modes de travail de l'atelier. `ab` compare les deux modèles côte à côte. */
 export type Mode = 'explore' | 'iterate' | 'produce' | 'ab'
@@ -95,6 +98,12 @@ export interface GenerationRequest {
   identityLock?: boolean
   paletteTransfer?: boolean
   params: GenerationParams
+  /**
+   * Graine tirée pour cet envoi, quand elle n'est pas verrouillée. Elle est
+   * décidée une fois par l'appelant : `buildPayload` reste ainsi une fonction
+   * de ses seules entrées, et la valeur affichée est celle qui part.
+   */
+  drawnSeed?: number | null
 }
 
 export interface GenerationResult {

@@ -1,9 +1,11 @@
-import { buildGptImage2Payload } from './gpt-image-2'
-import { buildNanoBanana2Payload } from './nano-banana-2'
+import { buildGptImage2Payload, type GptImage2Payload } from './gpt-image-2'
+import { buildNanoBanana2Payload, type NanoBanana2Payload } from './nano-banana-2'
 import type { GenerationRequest } from '@/lib/types'
 
+export type AdapterPayload = NanoBanana2Payload | GptImage2Payload
+
 /** Corps réel de la requête, pour le modèle sélectionné. */
-export function buildPayload(request: GenerationRequest): object {
+export function buildPayload(request: GenerationRequest): AdapterPayload {
   return request.adapterId === 'gpt-image-2'
     ? buildGptImage2Payload(request)
     : buildNanoBanana2Payload(request)

@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest'
 import { buildNanoBanana2Payload } from '@/lib/adapters/nano-banana-2'
 import { buildGptImage2Payload } from '@/lib/adapters/gpt-image-2'
 import { ignoredParams } from '@/lib/adapters/capabilities'
-import { mergeNegatives, resolveSeed } from '@/lib/adapters/shared'
+import { drawSeed, mergeNegatives, resolveSeed } from '@/lib/adapters/shared'
 import { DEFAULT_PARAMS } from '@/lib/atelier/params'
 import type { GenerationRequest } from '@/lib/types'
 
@@ -30,12 +30,20 @@ describe('négatif', () => {
 
 describe('graine', () => {
   test('une graine verrouillée est renvoyée telle quelle', () => {
-    expect(resolveSeed({ ...DEFAULT_PARAMS, seed: 4471902, seedLock: true })).toBe(4471902)
+    expect(resolveSeed({ ...DEFAULT_PARAMS, seed: 4471902, seedLock: true }, 1234567)).toBe(4471902)
   })
 
-  test('sans verrou, la graine est tirée à sept chiffres', () => {
-    const seed = resolveSeed({ ...DEFAULT_PARAMS, seed: 4471902, seedLock: false })
-    expect(String(seed)).toHaveLength(7)
+  test('sans verrou, la graine tirée par l’appelant est reprise', () => {
+    expect(resolveSeed({ ...DEFAULT_PARAMS, seed: 4471902, seedLock: false }, 1234567)).toBe(1234567)
+  })
+
+  test('resolveSeed est pure : deux appels identiques rendent la même valeur', () => {
+    const params = { ...DEFAULT_PARAMS, seed: null, seedLock: false }
+    expect(resolveSeed(params, 999)).toBe(resolveSeed(params, 999))
+  })
+
+  test('drawSeed tire bien sept chiffres', () => {
+    expect(String(drawSeed())).toHaveLength(7)
   })
 })
 
