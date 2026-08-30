@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { nanoBanana2Adapter } from '@/lib/adapters/nano-banana-2'
 import { gptImage2Adapter } from '@/lib/adapters/gpt-image-2'
+import { toClientMessage } from '@/lib/adapters/errors'
 import { checkRateLimit } from '@/lib/rate-limit'
 import type { GenerateResponse, GenerationRequest } from '@/lib/types'
 
@@ -31,7 +32,9 @@ export async function POST(req: NextRequest): Promise<NextResponse<GenerateRespo
     return NextResponse.json({ success: false, error: 'params is required' }, { status: 400 })
   }
 
-  const apiKey = req.headers.get('x-api-key') ?? undefined
+  // Un en-tête présent mais vide vaut '' : `??` le laisserait passer et il
+  // masquerait alors le repli serveur de l'adapter.
+  const apiKey = req.headers.get('x-api-key')?.trim() || undefined
   const adapter = body.adapterId === 'gpt-image-2' ? gptImage2Adapter : nanoBanana2Adapter
 
   try {
@@ -41,16 +44,9 @@ export async function POST(req: NextRequest): Promise<NextResponse<GenerateRespo
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[generate]', message)
 
-    const clientMessage = /api.key|api key|authentication|unauthorized|incorrect api key/i.test(
-      message
+    return NextResponse.json(
+      { success: false, error: toClientMessage(message) },
+      { status: 500 }
     )
-      ? 'Clé API invalide ou manquante'
-      : /quota|rate.limit|resource.exhausted|billing/i.test(message)
-        ? 'Quota API dépassé'
-        : /no image/i.test(message)
-          ? 'Aucune image retournée par le modèle'
-          : 'Erreur lors de la génération'
-
-    return NextResponse.json({ success: false, error: clientMessage }, { status: 500 })
   }
 }

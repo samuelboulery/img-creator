@@ -330,7 +330,12 @@ export default function Home() {
           {state.error && (
             <ErrorBanner
               message={state.error}
+              kind={state.errorKind}
               onRetry={() => void atelier.generate(atelier.prompt)}
+              onOpenSettings={() => {
+                dispatch({ type: 'setError', error: null })
+                dispatch({ type: 'toggleDrawer', drawer: 'settings' })
+              }}
               onDismiss={() => dispatch({ type: 'setError', error: null })}
             />
           )}

@@ -88,3 +88,56 @@ test("le panneau de paramètres se replie sous 1100 px", async ({ page }) => {
   await page.getByRole('button', { name: 'Paramètres', exact: true }).click()
   await expect(page.getByRole('complementary', { name: 'Paramètres' })).toBeVisible()
 })
+
+test("une clé manquante mène aux réglages, pas à un « Réessayer » stérile", async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.clear())
+
+  // L'échec que renvoie réellement /api/generate quand aucune clé n'est
+  // configurée — cf. lib/adapters/errors.ts.
+  await page.route('**/api/generate', async (route) => {
+    await route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: false, error: 'Clé API invalide ou manquante' }),
+    })
+  })
+
+  await page.goto('/')
+  await page.getByRole('dialog').getByRole('button', { name: "Entrer dans l'atelier" }).click()
+
+  await page.getByLabel('Prompt', { exact: true }).fill('un phare dans la tempête')
+  await page.getByRole('button', { name: /^Générer/ }).click()
+
+  // Next ajoute son propre role=alert (route announcer) : viser le bandeau.
+  const banner = page.getByRole('alert').filter({ hasText: 'Clé API' })
+  await expect(banner).toContainText('Clé API invalide ou manquante')
+
+  // Réessayer à l'identique ne peut que réechouer : l'action mène aux clés.
+  const action = banner.getByRole('button', { name: 'Ouvrir les réglages' })
+  await expect(action).toBeVisible()
+  await action.click()
+
+  await expect(page.getByRole('alert').filter({ hasText: 'Clé API' })).toHaveCount(0)
+  await expect(page.getByLabel('Google AI Studio')).toBeVisible()
+})
+
+test("l'écran d'accueil tient dans un téléphone", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.addInitScript(() => window.localStorage.clear())
+  await page.goto('/')
+
+  const dialog = page.getByRole('dialog', { name: 'Connecte un modèle' })
+  await expect(dialog).toBeVisible()
+
+  // La carte et son bouton principal restent dans le viewport.
+  const box = await dialog.boundingBox()
+  expect(box!.x).toBeGreaterThanOrEqual(0)
+  expect(box!.x + box!.width).toBeLessThanOrEqual(375)
+
+  await expect(dialog.getByRole('button', { name: "Entrer dans l'atelier" })).toBeInViewport()
+
+  const debordement = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+  )
+  expect(debordement).toBe(false)
+})

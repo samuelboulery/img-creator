@@ -8,6 +8,15 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # 22 est la version de référence (.nvmrc) ; 24 couvre la dérive au lieu
+        # de la subir — c'est elle qui a révélé le localStorage natif de Node.
+        node: ['22.14.0', '24']
+
     steps:
       - uses: actions/checkout@v4
 
@@ -15,18 +24,25 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ matrix.node }}
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
 
+      # `always()` : voir les trois échecs d'un coup plutôt qu'un par push.
       - run: pnpm lint
       - run: pnpm typecheck
+        if: always()
       - run: pnpm test
+        if: always()
       - run: pnpm build
 
   e2e:
+    # Ne pas brûler l'installation de Chromium quand les types sont cassés.
+    needs: check
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     steps:
       - uses: actions/checkout@v4
 
@@ -34,11 +50,25 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: '.nvmrc'
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+
+      - name: Cache des navigateurs Playwright
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+
       - run: pnpm exec playwright install --with-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+
+      # Le cache restaure les binaires mais pas les dépendances système.
+      - run: pnpm exec playwright install-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+
       - run: pnpm test:e2e
 
       - uses: actions/upload-artifact@v4

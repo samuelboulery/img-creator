@@ -1,6 +1,12 @@
 import type { AdapterId, DrawerId, Mode, PanelTab } from '@/lib/types'
 
 /**
+ * Ce que l'utilisateur peut faire de l'erreur. `missing-key` est le seul cas où
+ * réessayer est inutile tant que rien n'a changé.
+ */
+export type ErrorKind = 'missing-key' | 'generic' | null
+
+/**
  * État d'interface de l'atelier. Aucune donnée serveur : ce qui doit survivre
  * au rechargement est persisté séparément dans localStorage.
  */
@@ -14,6 +20,12 @@ export interface AtelierState {
   viewerOpen: boolean
   cmdOpen: boolean
   error: string | null
+  /**
+   * Nature de l'erreur courante : elle décide de l'action proposée par le
+   * bandeau. Une clé manquante appelle « Ouvrir les réglages », pas « Réessayer »
+   * — réessayer à l'identique ne peut que réechouer.
+   */
+  errorKind: ErrorKind
   /** Cases cochées de la planche contact (mode Produire). */
   sheetSelection: string[]
   /** Sous ~1100 px, le panneau de paramètres se déplie à la demande. */
@@ -38,6 +50,7 @@ export const initialAtelierState: AtelierState = {
   viewerOpen: false,
   cmdOpen: false,
   error: null,
+  errorKind: null,
   sheetSelection: [],
   panelOpen: false,
 }
@@ -55,7 +68,7 @@ export type AtelierAction =
   | { type: 'closeViewer' }
   | { type: 'toggleCmd' }
   | { type: 'closeOverlays' }
-  | { type: 'setError'; error: string | null }
+  | { type: 'setError'; error: string | null; kind?: ErrorKind }
   | { type: 'toggleSheet'; id: string }
   | { type: 'selectSheet'; ids: string[] }
   | { type: 'togglePanel' }
@@ -115,7 +128,11 @@ export function atelierReducer(state: AtelierState, action: AtelierAction): Atel
       return { ...state, viewerOpen: false, cmdOpen: false }
 
     case 'setError':
-      return { ...state, error: action.error }
+      return {
+        ...state,
+        error: action.error,
+        errorKind: action.error ? (action.kind ?? 'generic') : null,
+      }
 
     case 'toggleSheet':
       return {
