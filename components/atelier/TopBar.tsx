@@ -38,11 +38,11 @@ export default function TopBar({ overlay, onOverlay, theme, onTheme, lang, onLan
   const label = 'max-[1100px]:sr-only'
 
   return (
-    <header className="relative z-20 flex h-[58px] shrink-0 items-center gap-0.5 border-b border-hairline bg-solid pr-3 pl-5">
+    <header className="relative z-20 flex h-[58px] shrink-0 items-center gap-0.5 border-b border-hairline bg-solid pr-3 pl-5 max-sm:pr-2 max-sm:pl-3">
       <div className="flex items-center gap-2.5">
         <Mark />
-        <span className="text-[15px] font-bold tracking-[-0.02em]">obskura</span>
-        <span className="rounded-xs border border-hairline-strong px-[5px] font-mono text-10 leading-4 tracking-[0.08em] text-ink-soft">
+        <span className="text-[15px] font-bold tracking-[-0.02em] max-[420px]:sr-only">obskura</span>
+        <span className="rounded-xs border border-hairline-strong px-[5px] font-mono text-10 leading-4 tracking-[0.08em] text-ink-soft max-sm:hidden">
           {t.app.local}
         </span>
       </div>
@@ -56,24 +56,24 @@ export default function TopBar({ overlay, onOverlay, theme, onTheme, lang, onLan
         active={sheetOpen}
         aria-pressed={sheetOpen}
         onClick={onSheet}
-        className="mr-1.5 min-[1101px]:hidden"
+        className="mr-1.5 min-[1101px]:hidden max-sm:!px-2"
       >
-        {t.top.settings}
+        <span className="max-sm:sr-only">{t.top.settings}</span>
       </Button>
 
       <div className="relative">
-      <Button
-        icon={BookmarkSimpleIcon}
-        active={overlay === 'presets'}
-        aria-haspopup="dialog"
-        aria-expanded={overlay === 'presets'}
-        aria-label={t.top.presets}
-        onClick={() => onOverlay('presets')}
-      >
-        <span className={label}>{t.top.presets}</span>
-        <CaretDownIcon size={12} aria-hidden className="max-[1100px]:hidden" />
-      </Button>
-      {overlay === 'presets' && presetsMenu}
+        <Button
+          icon={BookmarkSimpleIcon}
+          active={overlay === 'presets'}
+          aria-haspopup="dialog"
+          aria-expanded={overlay === 'presets'}
+          aria-label={t.top.presets}
+          onClick={() => onOverlay('presets')}
+        >
+          <span className={label}>{t.top.presets}</span>
+          <CaretDownIcon size={12} aria-hidden className="max-[1100px]:hidden" />
+        </Button>
+        {overlay === 'presets' && presetsMenu}
       </div>
       <Button
         icon={ClockCounterClockwiseIcon}
@@ -87,7 +87,7 @@ export default function TopBar({ overlay, onOverlay, theme, onTheme, lang, onLan
         <span className={label}>{t.top.keys}</span>
       </Button>
 
-      <div aria-hidden className="mx-1.5 h-5 w-px bg-hairline" />
+      <div aria-hidden className="mx-1.5 h-5 w-px bg-hairline max-sm:hidden" />
 
       <Button
         icon={MagnifyingGlassIcon}
@@ -97,13 +97,16 @@ export default function TopBar({ overlay, onOverlay, theme, onTheme, lang, onLan
         onClick={() => onOverlay('palette')}
         className="!px-2"
       >
-        <Kbd keys={['mod', 'K']} />
+        <span className="max-sm:hidden">
+          <Kbd keys={['mod', 'K']} />
+        </span>
       </Button>
       <IconButton
         icon={QuestionIcon}
         label={t.top.shortcuts}
         active={overlay === 'shortcuts'}
         onClick={() => onOverlay('shortcuts')}
+        className="max-sm:hidden"
       />
       <Button
         aria-label={t.top.switchLanguage}

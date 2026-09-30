@@ -54,7 +54,7 @@ export default function PresetsMenu({ recipes, activeId, onApply, onSave, onDele
         event.stopPropagation()
         onClose()
       }}
-      className="absolute top-full right-0 z-40 mt-2 flex w-[340px] flex-col rounded-xs border border-hairline-strong bg-solid"
+      className="absolute top-full right-0 z-40 mt-2 flex w-[340px] flex-col rounded-xs border border-hairline-strong bg-solid max-sm:fixed max-sm:inset-x-2 max-sm:top-[62px] max-sm:mt-0 max-sm:w-auto"
     >
       {recipes.length === 0 ? (
         <p className="meta p-4">{t.presets.empty}</p>

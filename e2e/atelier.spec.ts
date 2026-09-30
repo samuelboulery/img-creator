@@ -229,3 +229,33 @@ test('trois images sélectionnées : la fiche propose l’export', async ({ page
   await inspector.getByRole('button', { name: /Télécharger 3 images/ }).click()
   expect((await download).suggestedFilename()).toMatch(/^obskura-0\d-gen_\w{4}\.png$/)
 })
+
+test('sous 1100 px, les réglages passent en feuille ouverte à la demande', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 })
+  await page.goto('/')
+
+  const inspector = page.getByRole('complementary', { name: 'Inspecteur' })
+  await expect(inspector).toBeHidden()
+  await page.getByRole('button', { name: 'Réglages' }).click()
+  await expect(inspector).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(inspector).toBeHidden()
+})
+
+for (const width of [375, 1024]) {
+  test(`à ${width} px, rien ne déborde et Générer reste atteignable`, async ({ page }) => {
+    await withKey(page)
+    await mockGenerate(page)
+    await page.setViewportSize({ width, height: 812 })
+    await page.goto('/')
+    await generate(page, 'une dune au crépuscule')
+    await expect(page.getByAltText('une dune au crépuscule')).toBeVisible()
+
+    await expect(page.getByRole('button', { name: /^Générer/ })).toBeInViewport()
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+    )
+    expect(overflow).toBe(false)
+    await page.screenshot({ path: `test-results/obskura-${width}.png` })
+  })
+}

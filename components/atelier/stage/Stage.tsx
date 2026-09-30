@@ -61,7 +61,6 @@ export default function Stage({ atelier }: { atelier: Atelier }) {
   return (
     <section
       aria-label={t.stage.label}
-      tabIndex={0}
       data-stage
       onDragOver={(event) => {
         if (!hasFiles(event)) return
@@ -77,7 +76,7 @@ export default function Stage({ atelier }: { atelier: Atelier }) {
         setDragging(false)
         void atelier.addReferenceFiles('subject', Array.from(event.dataTransfer.files))
       }}
-      className="stage-dots relative flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-xs border border-hairline p-6 [container-type:size]"
+      className="stage-dots relative flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-xs border border-hairline p-6 [container-type:size] max-sm:p-3"
     >
       {content}
       {dragging && (
@@ -149,7 +148,7 @@ function Single({ entry, atelier }: { entry: Resolved; atelier: Atelier }) {
       src={imageSrc(item)}
       alt={item.prompt}
       ratio={item.params.aspectRatio}
-      className="max-h-full max-w-full object-contain"
+      className="h-full max-h-full w-full max-w-full object-contain"
     />
   )
 }

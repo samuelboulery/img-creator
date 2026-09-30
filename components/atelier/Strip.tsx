@@ -34,11 +34,11 @@ export default function Strip({ items, failures, pending, selectedIds, onSelect,
     <nav
       data-strip
       aria-label={t.strip.label}
-      className="flex min-h-0 flex-col items-center gap-2 rounded-xs border border-hairline bg-panel pt-3 pb-2 backdrop-blur-md"
+      className="flex min-h-0 flex-col items-center gap-2 rounded-xs border border-hairline bg-panel pt-3 pb-2 backdrop-blur-md max-sm:flex-row max-sm:py-1.5 max-sm:pr-1 max-sm:pl-2"
     >
-      <span className="lbl">{t.strip.label}</span>
+      <span className="lbl max-sm:sr-only">{t.strip.label}</span>
 
-      <ul className="flex min-h-0 w-full flex-1 flex-col items-center gap-2 overflow-y-auto px-1 pt-1.5 pb-1 [scrollbar-width:none]">
+      <ul className="flex min-h-0 w-full flex-1 flex-col items-center gap-2 overflow-y-auto px-1 pt-1.5 pb-1 [scrollbar-width:none] max-sm:min-w-0 max-sm:flex-row max-sm:overflow-x-auto max-sm:overflow-y-hidden max-sm:py-1">
         {pending.flatMap((tile) =>
           Array.from({ length: tile.count }, (_, index) => {
             const seconds = elapsedSeconds(now, tile.startedAt)
@@ -111,12 +111,12 @@ export default function Strip({ items, failures, pending, selectedIds, onSelect,
         })}
       </ul>
 
-      <span className="meta">{t.common.images(total)}</span>
+      <span className="meta max-sm:hidden">{t.common.images(total)}</span>
       <IconButton icon={BroomIcon} label={t.strip.newSession} onClick={onNewSession} disabled={total === 0 && failures.length === 0} />
     </nav>
   )
 }
 
 function Separator() {
-  return <li aria-hidden className="my-1 h-px w-8 shrink-0 bg-hairline" />
+  return <li aria-hidden className="my-1 h-px w-8 shrink-0 bg-hairline max-sm:mx-1 max-sm:my-0 max-sm:h-8 max-sm:w-px" />
 }

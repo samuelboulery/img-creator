@@ -16,7 +16,6 @@ export const STORAGE_KEYS = {
   session: 'imgc.session',
   params: 'imgc.params',
   prefs: 'imgc.prefs',
-  onboarded: 'imgc.onboarded',
 } as const
 
 export const ENRICH_PRE_PROMPT = `Tu es directeur artistique. Réécris le prompt de l'utilisateur pour un modèle texte-vers-image.

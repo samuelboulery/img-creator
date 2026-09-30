@@ -1,6 +1,8 @@
 <div align="center">
 
-# img-creator
+# Obskura
+
+<sub><code>img-creator</code></sub>
 
 **A local-first workshop for image generation.**
 One prompt, several models, side by side — no account, no database, no server that keeps your keys.
@@ -12,9 +14,9 @@ One prompt, several models, side by side — no account, no database, no server 
 
 [Quick start](#quick-start) · [Why](#why) · [Models](#models) · [How it works](#how-it-works) · [Français](README.fr.md)
 
-<img src="docs/screenshot.png" alt="The img-creator workshop: tool rail, canvas holding a 24-image session, composer and settings panel" width="900">
+<img src="docs/screenshot.png" alt="Obskura: session strip, the selected image on the stage, the prompt composer and the settings inspector" width="900">
 
-<sub>Demo session: the visuals are royalty-free photographs, not model output. Regenerate the screenshots with <code>node scripts/screenshots.mjs</code>.</sub>
+<sub>Demo session: the visuals are drawn on a canvas by the screenshot script, not model output. Regenerate them with <code>node scripts/screenshots.mjs</code>.</sub>
 
 </div>
 
@@ -24,24 +26,26 @@ One prompt, several models, side by side — no account, no database, no server 
 
 Most image-generation front-ends hide the request. You move a slider, something happens, and you never learn whether the model actually received the value — or silently dropped it.
 
-img-creator does the opposite. **The JSON tab shows the real request body**, built by the same pure function the adapter sends. Parameters a model does not support are pruned from the payload *and* labelled `ignoré ici` in the panel. What you see is what leaves your browser.
+Obskura does the opposite. **The inspector shows the real request body**, built by the same pure function the adapter sends. And it only shows the settings the selected model actually reads: switch model and the controls it ignores disappear, with a note saying what was added and removed. What you see is what leaves your browser.
 
 <div align="center">
-<img src="docs/screenshot-json.png" alt="The JSON tab showing the exact request body and the parameters this model ignores" width="900">
+<img src="docs/screenshot-json.png" alt="The Advanced section of the inspector showing the exact request body" width="900">
 </div>
 
 ## Features
 
-- **Two models, one prompt** — `nano-banana-2` (Gemini 3.1 Flash Image) and `gpt-image-2`, with an A/B mode that runs both in parallel on identical input.
-- **Four working modes** — *Explore* (fan out), *Iterate* (refine one result), *Produce* (contact sheet), *Compare* (A/B two models).
+- **Four models, one prompt** — `nano-banana-2` (Gemini 3.1 Flash Image), `gpt-image-2`, `gpt-image-2.5-sunburst` and `gpt-image-2.5-flare`. Tick *in parallel* in the model menu to run a second model on identical input; results arrive as a pair.
+- **One workspace, driven by selection** — nothing selected: settings. One image: its sheet (prompt, settings, palette, origin, *Reuse*, *Vary ×4*, *Use as reference*). Two: side-by-side comparison with the differences listed. More: export as original, PNG or JPEG, with a settings manifest.
+- **Undo instead of confirm** — deleting, keeping one of a pair or enriching a prompt can be undone from the status line or with <kbd>⌘Z</kbd>.
+- **Keys asked for when needed** — generating without a key shows a key card on the stage; nothing is sent, and the generation starts as soon as the key is saved.
 - **Honest payloads** — every adapter exposes a genuinely pure `buildPayload()`: no randomness, no clock, so the inspector renders the exact object that will be sent. The seed is drawn once by the caller and travels with the request, then is stored on the resulting image — an unlocked generation stays reproducible.
-- **Per-model capabilities** — a single source of truth (`lib/adapters/capabilities.ts`) drives both payload pruning and the "ignored here" badges. Removing an entry from the table removes the field from the wire *and* fails a contract test; the badge can no longer lie.
+- **Per-model capabilities** — a single descriptor per model (`lib/adapters/capabilities.ts`) drives payload pruning, request validation and the inspector. Removing a setting from a model removes the field from the wire, hides the control *and* fails a contract test.
 - **Recipes** — save references, weights, prompt suffix, negative and render settings as a reusable preset. Export and import as plain `.json`.
-- **Subject & style references** — drag images in, weight them from *inspiration* to *reproduction*, lock identity, transfer palette.
+- **Subject & style references** — drop images on the stage (left half subject, right half style), weight them when the model reads weights, lock identity, transfer palette.
 - **Prompt enrichment** — rewrite a prompt through a text model using *your* key. No server key is ever used for this.
-- **Ambient background** — the dominant palette of the last result tints the room around the canvas. Never the images themselves.
+- **Paper and ink** — dark first, light second, French and English; the chrome carries no colour, so the images keep all of it.
 - **Local cost estimate** — a per-image price you can edit; the app queries no pricing API.
-- **Command palette** — <kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd>, plus <kbd>⏎</kbd> to generate.
+- **Keyboard first** — <kbd>⌘↵</kbd> generates, <kbd>⌘K</kbd> opens every action, <kbd>?</kbd> lists the shortcuts.
 
 ## Quick start
 
@@ -52,7 +56,7 @@ pnpm install
 pnpm dev
 ```
 
-Open <http://localhost:3000>, paste an API key into the onboarding card, and you are in the workshop.
+Open <http://localhost:3000>, write a prompt and press <kbd>⌘↵</kbd>: the stage asks for the key it needs the first time.
 
 > **pnpm only.** `npm`, `yarn` and `bun` are not supported — the lockfile and the `packageManager` field pin pnpm.
 
@@ -61,7 +65,7 @@ Open <http://localhost:3000>, paste an API key into the onboarding card, and you
 | Model | Key from |
 |---|---|
 | `nano-banana-2` | [Google AI Studio](https://aistudio.google.com/apikey) |
-| `gpt-image-2` | [OpenAI platform](https://platform.openai.com/api-keys) |
+| `gpt-image-2` · `gpt-image-2.5-*` | [OpenAI platform](https://platform.openai.com/api-keys) |
 
 Keys are typed by you, held in `localStorage`, and forwarded as an `x-api-key` header to this app's own API routes. They are never bundled, never logged, never persisted server-side.
 
@@ -78,38 +82,38 @@ Prompt enrichment deliberately has **no** server fallback: it always spends the 
 
 ## Models
 
-| Capability | `nano-banana-2` | `gpt-image-2` |
+| Capability | `nano-banana-2` | `gpt-image-2` · `gpt-image-2.5-*` |
 |---|:---:|:---:|
 | Aspect ratio | ✅ | ✅ `size` |
-| Resolution | ✅ `imageConfig.imageSize` | ✅ derived quality (1K→low, 2K→medium, 4K→high) |
+| Resolution | ✅ `imageConfig.imageSize` | ✅ derived quality (1K→low, 2K→medium, 4K→high; 6K→xhigh, 8K→max on 2.5) |
 | Variants per run | ✅ `candidateCount` | ✅ `n` |
 | Seed | ✅ | — |
 | File type / transparency / compression | — | ✅ |
 | `personGeneration` | ✅ | — |
 | Moderation | — | ✅ |
 | Image references | ✅ `inlineData` | ✅ |
-| Guidance (CFG), steps, sampler | — | — |
 
-Neither API exposes a dedicated negative-prompt field, so the negative is **merged into the end of the prompt** after de-duplication against the recipe's own negative. The panel says so, and the JSON tab shows the result.
+Neither API exposes a dedicated negative-prompt field, so the negative is **merged into the end of the prompt** after de-duplication against the preset's own negative. The request block in the inspector shows the result.
 
 ## How it works
 
 ```
 app/
-  page.tsx                 shell: rail · drawer · canvas · panel
+  page.tsx                 shell: top bar · strip · stage + composer · inspector
   api/generate/route.ts    image proxy — validates, rate-limits, picks adapter
-  api/enrich/route.ts      prompt rewrite with the user's text key
+  api/enrich/route.ts      prompt rewrite with the user's own key
 components/atelier/
-  modes/     Explore · Iterate · Produce · Compare
-  panel/     SettingsPanel · RecipeTab · JsonTab · ReferenceGrid · RawParams
-  drawers/   History · Recipes · Enrich · Settings
-  overlays/  Viewer · CommandPalette · Onboarding
+  TopBar · Strip · Composer · ui (primitives) · commands · use-shortcuts
+  stage/      Stage · KeyCard
+  inspector/  Settings · Image · Failure · Pair · Multi · ModelMenu · …
+  overlays/   Dialog · PresetsMenu · HistoryDialog · KeysDialog · CommandPalette · ShortcutsDialog
 lib/
-  adapters/  capabilities · nano-banana-2 · gpt-image-2 · shared · payload
-  atelier/   use-atelier (state) · reducer · storage · recipes · palette · diff · cost
+  adapters/  capabilities · nano-banana-2 · gpt-image (factory) · shared · payload · validate
+  atelier/   use-atelier (state) · reducer · session-view · undo · storage · recipes · export · diff · cost
+  i18n/      fr (reference) · en — typed dictionaries, no library
 ```
 
-Adding a model is one file in `lib/adapters/` implementing `GenerateImageAdapter`, plus one entry in `capabilities.ts`. The UI, the payload pruning and the "ignored here" badges follow automatically.
+Adding a model is one file in `lib/adapters/` implementing `GenerateImageAdapter`, plus one entry in `MODELS` (`capabilities.ts`). The inspector, the payload pruning and the validation follow automatically.
 
 **Design rules the codebase holds itself to:**
 
@@ -127,7 +131,8 @@ Nothing is stored outside your browser. `localStorage` holds:
 | `gemini_api_key` · `openai_api_key` · `text_api_key` | your keys |
 | `imgc.recipes` | saved presets |
 | `imgc.session` | current session, capped, images as base64 |
-| `imgc.params` · `imgc.prefs` · `imgc.onboarded` | settings and UI state |
+| `imgc.params` | current settings |
+| `imgc.prefs` | theme, language, prices, enrichment key and instructions |
 
 The API routes apply a naive in-memory rate limit (10 requests/minute). It resets on restart and does not survive multiple instances — enough for a single self-hosted deployment, not for a public service.
 

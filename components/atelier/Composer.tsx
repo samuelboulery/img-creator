@@ -75,7 +75,7 @@ export default function Composer({ atelier, promptRef }: ComposerProps) {
         event.preventDefault()
         void atelier.generate()
       }}
-      className="mx-auto flex w-full max-w-[800px] flex-col gap-2 rounded-xs border border-hairline bg-solid p-3"
+      className="mx-auto flex w-full max-w-[800px] flex-col gap-2 rounded-xs border border-hairline bg-solid p-3 max-sm:p-2"
     >
       <label className="sr-only" htmlFor="prompt">
         {t.composer.prompt}
@@ -114,7 +114,7 @@ export default function Composer({ atelier, promptRef }: ComposerProps) {
         </div>
       )}
 
-      <div className="flex min-w-0 items-center gap-1.5">
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
         {chips.map(({ kind, image }) => (
           <span
             key={image.id}
@@ -137,7 +137,7 @@ export default function Composer({ atelier, promptRef }: ComposerProps) {
             aria-expanded={refMenu}
             onClick={() => setRefMenu((open) => !open)}
           >
-            {t.composer.reference}
+            <span className="max-sm:sr-only">{t.composer.reference}</span>
           </Button>
           {refMenu && (
             <div
@@ -182,7 +182,7 @@ export default function Composer({ atelier, promptRef }: ComposerProps) {
 
         {!showAvoid && (
           <Button size="sm" icon={ProhibitIcon} onClick={() => setAvoidOpen(true)}>
-            {t.composer.avoid}
+            <span className="max-sm:sr-only">{t.composer.avoid}</span>
           </Button>
         )}
         <Button
@@ -191,7 +191,7 @@ export default function Composer({ atelier, promptRef }: ComposerProps) {
           disabled={!prompt.trim() || atelier.enriching}
           onClick={() => void atelier.enrich()}
         >
-          {atelier.enriching ? t.composer.enriching : t.composer.enrich}
+          <span className="max-sm:sr-only">{atelier.enriching ? t.composer.enriching : t.composer.enrich}</span>
         </Button>
 
         <StatusLine
@@ -204,7 +204,7 @@ export default function Composer({ atelier, promptRef }: ComposerProps) {
           onUndo={atelier.undo}
         />
 
-        <Button type="submit" variant="primary" disabled={!prompt.trim()} className="gap-2">
+        <Button type="submit" variant="primary" disabled={!prompt.trim()} className="gap-2 max-sm:ml-auto">
           {t.composer.generate}
           <Kbd keys={['mod', '↵']} onInk />
         </Button>
@@ -249,7 +249,7 @@ function StatusLine({ running, seconds, notice, waitingKey, cost, onStop, onUndo
   return (
     <p
       role="status"
-      className="meta flex min-w-0 flex-1 items-center justify-end gap-2 truncate text-right"
+      className="meta flex min-w-0 flex-1 items-center justify-end gap-2 truncate text-right max-sm:order-last max-sm:basis-full max-sm:justify-start"
     >
       {content}
     </p>

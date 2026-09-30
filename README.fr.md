@@ -1,9 +1,11 @@
 <div align="center">
 
-# img-creator
+# Obskura
+
+<sub><code>img-creator</code></sub>
 
 **Un atelier local pour la génération d'images.**
-Un prompt, plusieurs modèles côte à côte — pas de compte, pas de base de données, aucun serveur qui garde tes clés.
+Un prompt, plusieurs modèles côte à côte — pas de compte, pas de base de données, aucun serveur qui garde vos clés.
 
 [![CI](https://github.com/samuelboulery/img-creator/actions/workflows/ci.yml/badge.svg)](https://github.com/samuelboulery/img-creator/actions/workflows/ci.yml)
 [![Licence : MIT](https://img.shields.io/badge/License-MIT-f5a623.svg)](LICENSE)
@@ -12,9 +14,9 @@ Un prompt, plusieurs modèles côte à côte — pas de compte, pas de base de d
 
 [Démarrage](#démarrage) · [Pourquoi](#pourquoi) · [Modèles](#modèles) · [Fonctionnement](#fonctionnement) · [English](README.md)
 
-<img src="docs/screenshot.png" alt="L'atelier img-creator : rail d'outils, canvas rempli d'une session de 24 images, composer et panneau de réglages" width="900">
+<img src="docs/screenshot.png" alt="Obskura : bande de session, image sélectionnée sur la scène, composeur de prompt et inspecteur de réglages" width="900">
 
-<sub>Session de démonstration : les visuels sont des photos libres de droit, pas des sorties de modèle. Regénérer les captures avec <code>node scripts/screenshots.mjs</code>.</sub>
+<sub>Session de démonstration : les visuels sont dessinés au canvas par le script de capture, pas des sorties de modèle. Les regénérer avec <code>node scripts/screenshots.mjs</code>.</sub>
 
 </div>
 
@@ -22,26 +24,28 @@ Un prompt, plusieurs modèles côte à côte — pas de compte, pas de base de d
 
 ## Pourquoi
 
-La plupart des interfaces de génération d'images cachent la requête. Tu bouges un curseur, quelque chose se passe, et tu n'apprends jamais si le modèle a reçu la valeur — ou l'a silencieusement jetée.
+La plupart des interfaces de génération d'images cachent la requête. Vous bougez un curseur, quelque chose se passe, et vous n'apprenez jamais si le modèle a reçu la valeur — ou l'a silencieusement jetée.
 
-img-creator fait l'inverse. **L'onglet JSON affiche le corps réel de la requête**, construit par la fonction pure que l'adapter envoie. Les paramètres qu'un modèle ne supporte pas sont élagués du payload *et* marqués `ignoré ici` dans le panneau. Ce que tu vois est ce qui quitte ton navigateur.
+Obskura fait l'inverse. **L'inspecteur affiche le corps réel de la requête**, construit par la fonction pure que l'adapter envoie. Et il ne montre que les réglages que le modèle choisi lit : changer de modèle retire les contrôles qu'il ignore, avec une note sur ce qui a été ajouté et retiré. Ce que vous voyez est ce qui quitte votre navigateur.
 
 <div align="center">
-<img src="docs/screenshot-json.png" alt="L'onglet JSON montrant le corps exact de la requête et les paramètres ignorés par ce modèle" width="900">
+<img src="docs/screenshot-json.png" alt="La section Avancé de l'inspecteur montrant le corps exact de la requête" width="900">
 </div>
 
 ## Fonctionnalités
 
-- **Deux modèles, un prompt** — `nano-banana-2` (Gemini 3.1 Flash Image) et `gpt-image-2`, avec un mode A/B qui lance les deux en parallèle sur une entrée identique.
-- **Quatre modes de travail** — *Explorer* (ouvrir large), *Itérer* (affiner un résultat), *Produire* (planche contact), *Comparer* (A/B deux modèles).
+- **Quatre modèles, un prompt** — `nano-banana-2` (Gemini 3.1 Flash Image), `gpt-image-2`, `gpt-image-2.5-sunburst` et `gpt-image-2.5-flare`. La case *en parallèle* du menu Modèle lance un second modèle sur la même entrée ; les résultats arrivent en paire.
+- **Un seul espace, piloté par la sélection** — rien de sélectionné : les réglages. Une image : sa fiche (prompt, réglages, palette, origine, *Reprendre*, *Varier ×4*, *Utiliser comme référence*). Deux : la comparaison et ses écarts. Davantage : l'export en original, PNG ou JPEG, avec un manifeste des réglages.
+- **Annuler plutôt que confirmer** — supprimer, garder une image d'une paire ou enrichir un prompt s'annule depuis la ligne d'état ou avec <kbd>⌘Z</kbd>.
+- **La clé demandée au bon moment** — générer sans clé affiche une carte sur la scène ; rien ne part, et la génération reprend dès la clé enregistrée.
 - **Payloads honnêtes** — chaque adapter expose un `buildPayload()` pur. L'inspecteur affiche cet objet exact, jamais une reconstitution.
-- **Capacités par modèle** — une source unique (`lib/adapters/capabilities.ts`) pilote à la fois l'élagage du payload et les badges « ignoré ici ».
-- **Recettes** — enregistre références, poids, suffixe de prompt, négatif et réglages en preset réutilisable. Export et import en `.json`.
-- **Références de sujet et de style** — glisse des images, dose de *inspiration* à *reproduction*, verrouille l'identité, transfère la palette.
-- **Enrichissement de prompt** — réécris un prompt via un modèle de texte avec *ta* clé. Aucune clé serveur n'est utilisée pour ça.
-- **Fond ambiant** — la palette dominante du dernier résultat teinte la pièce autour du canvas. Jamais les images elles-mêmes.
+- **Capacités par modèle** — un descripteur par modèle (`lib/adapters/capabilities.ts`) pilote l'élagage du payload, la validation des requêtes et l'inspecteur.
+- **Presets** — références, poids, suffixe de prompt, négatif et réglages enregistrés ensemble. Export et import en `.json`.
+- **Références de sujet et de style** — déposer des images sur la scène (moitié gauche sujet, moitié droite style), les doser quand le modèle lit un poids, garder l'identité, reprendre la palette.
+- **Enrichissement de prompt** — réécrit sur place par un modèle de texte, avec *votre* clé, et annulable. Aucune clé serveur n'est utilisée pour ça.
+- **Papier et encre** — sombre d'abord, clair ensuite, en français et en anglais ; le chrome ne porte aucune couleur, les images gardent toutes les leurs.
 - **Estimation de coût locale** — un tarif par image éditable ; l'app n'interroge aucune grille tarifaire.
-- **Palette de commandes** — <kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd>, et <kbd>⏎</kbd> pour générer.
+- **Au clavier** — <kbd>⌘↵</kbd> génère, <kbd>⌘K</kbd> ouvre toutes les actions, <kbd>?</kbd> liste les raccourcis.
 
 ## Démarrage
 
@@ -52,7 +56,7 @@ pnpm install
 pnpm dev
 ```
 
-Ouvre <http://localhost:3000>, colle une clé API dans l'écran d'accueil, et tu es dans l'atelier.
+Ouvrir <http://localhost:3000>, écrire un prompt, <kbd>⌘↵</kbd> : la scène demande la clé nécessaire la première fois.
 
 > **pnpm exclusivement.** `npm`, `yarn` et `bun` ne sont pas supportés — le lockfile et le champ `packageManager` épinglent pnpm.
 
@@ -61,13 +65,13 @@ Ouvre <http://localhost:3000>, colle une clé API dans l'écran d'accueil, et tu
 | Modèle | Clé chez |
 |---|---|
 | `nano-banana-2` | [Google AI Studio](https://aistudio.google.com/apikey) |
-| `gpt-image-2` | [Plateforme OpenAI](https://platform.openai.com/api-keys) |
+| `gpt-image-2` · `gpt-image-2.5-*` | [Plateforme OpenAI](https://platform.openai.com/api-keys) |
 
-Les clés sont saisies par toi, gardées dans `localStorage`, et transmises en en-tête `x-api-key` aux routes API de l'app. Elles ne sont jamais bundlées, jamais journalisées, jamais persistées côté serveur.
+Les clés sont saisies par vous, gardées dans `localStorage`, et transmises en en-tête `x-api-key` aux routes API de l'app. Elles ne sont jamais bundlées, jamais journalisées, jamais persistées côté serveur.
 
 ### Repli serveur optionnel
 
-Pour une instance de démo partagée, tu peux fournir des clés de repli — copie `.env.local.example` vers `.env.local` :
+Pour une instance de démo partagée, des clés de repli peuvent être fournies — copier `.env.local.example` vers `.env.local` :
 
 ```bash
 GEMINI_API_KEY=...   # repli optionnel pour nano-banana-2
@@ -78,38 +82,38 @@ L'enrichissement de prompt n'a délibérément **aucun** repli serveur : il cons
 
 ## Modèles
 
-| Capacité | `nano-banana-2` | `gpt-image-2` |
+| Capacité | `nano-banana-2` | `gpt-image-2` · `gpt-image-2.5-*` |
 |---|:---:|:---:|
 | Format | ✅ | ✅ `size` |
-| Résolution | ✅ `imageConfig.imageSize` | ✅ qualité dérivée (1K→low, 2K→medium, 4K→high) |
+| Résolution | ✅ `imageConfig.imageSize` | ✅ qualité dérivée (1K→low, 2K→medium, 4K→high ; 6K→xhigh, 8K→max en 2.5) |
 | Variantes par envoi | ✅ `candidateCount` | ✅ `n` |
 | Graine | ✅ | — |
 | Type de fichier / transparence / compression | — | ✅ |
 | `personGeneration` | ✅ | — |
 | Modération | — | ✅ |
 | Références image | ✅ `inlineData` | ✅ |
-| Guidage (CFG), étapes, échantillonneur | — | — |
 
-Aucune des deux API n'expose de champ dédié au négatif : il est donc **fusionné en fin de prompt** après déduplication avec le négatif de la recette. Le panneau le dit, et l'onglet JSON montre le résultat.
+Aucune des deux API n'expose de champ dédié au négatif : il est donc **fusionné en fin de prompt** après déduplication avec le négatif du preset. Le bloc Requête de l'inspecteur montre le résultat.
 
 ## Fonctionnement
 
 ```
 app/
-  page.tsx                 shell : rail · tiroir · canvas · panneau
+  page.tsx                 shell : barre · bande · scène + composeur · inspecteur
   api/generate/route.ts    proxy image — valide, limite le débit, choisit l'adapter
-  api/enrich/route.ts      réécriture de prompt avec la clé texte de l'utilisateur
+  api/enrich/route.ts      réécriture de prompt avec la clé de l'utilisateur
 components/atelier/
-  modes/     Explore · Iterate · Produce · Compare
-  panel/     SettingsPanel · RecipeTab · JsonTab · ReferenceGrid · RawParams
-  drawers/   History · Recipes · Enrich · Settings
-  overlays/  Viewer · CommandPalette · Onboarding
+  TopBar · Strip · Composer · ui (primitives) · commands · use-shortcuts
+  stage/      Stage · KeyCard
+  inspector/  Settings · Image · Failure · Pair · Multi · ModelMenu · …
+  overlays/   Dialog · PresetsMenu · HistoryDialog · KeysDialog · CommandPalette · ShortcutsDialog
 lib/
-  adapters/  capabilities · nano-banana-2 · gpt-image-2 · shared · payload
-  atelier/   use-atelier (état) · reducer · storage · recipes · palette · diff · cost
+  adapters/  capabilities · nano-banana-2 · gpt-image (fabrique) · shared · payload · validate
+  atelier/   use-atelier (état) · reducer · session-view · undo · storage · recipes · export · diff · cost
+  i18n/      fr (référence) · en — dictionnaires typés, sans bibliothèque
 ```
 
-Ajouter un modèle, c'est un fichier dans `lib/adapters/` implémentant `GenerateImageAdapter`, plus une entrée dans `capabilities.ts`. L'UI, l'élagage du payload et les badges « ignoré ici » suivent tout seuls.
+Ajouter un modèle, c'est un fichier dans `lib/adapters/` implémentant `GenerateImageAdapter`, plus une entrée dans `MODELS` (`capabilities.ts`). L'inspecteur, l'élagage du payload et la validation suivent tout seuls.
 
 **Les règles que le code s'impose :**
 
@@ -120,14 +124,15 @@ Ajouter un modèle, c'est un fichier dans `lib/adapters/` implémentant `Generat
 
 ### Vie privée et stockage
 
-Rien n'est stocké hors de ton navigateur. `localStorage` contient :
+Rien n'est stocké hors de votre navigateur. `localStorage` contient :
 
 | Clé | Contenu |
 |---|---|
-| `gemini_api_key` · `openai_api_key` · `text_api_key` | tes clés |
+| `gemini_api_key` · `openai_api_key` · `text_api_key` | vos clés |
 | `imgc.recipes` | presets enregistrés |
 | `imgc.session` | session courante, plafonnée, images en base64 |
-| `imgc.params` · `imgc.prefs` · `imgc.onboarded` | réglages et état d'interface |
+| `imgc.params` | réglages courants |
+| `imgc.prefs` | thème, langue, tarifs, clé et consigne d'enrichissement |
 
 Les routes API appliquent une limite de débit naïve en mémoire (10 requêtes/minute par IP). Elle se réinitialise au redémarrage et ne survit pas à plusieurs instances — suffisant pour un déploiement auto-hébergé, pas pour un service public.
 

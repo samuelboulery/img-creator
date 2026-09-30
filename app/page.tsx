@@ -67,7 +67,7 @@ function Workspace({ atelier }: { atelier: Atelier }) {
         }
       />
 
-      <div className="relative grid min-h-0 flex-1 grid-cols-[88px_minmax(0,1fr)_288px] gap-4 p-4 max-[1100px]:grid-cols-[88px_minmax(0,1fr)]">
+      <div className="relative grid min-h-0 flex-1 grid-cols-[88px_minmax(0,1fr)_288px] gap-4 p-4 max-[1100px]:grid-cols-[88px_minmax(0,1fr)] max-sm:grid-cols-1 max-sm:grid-rows-[auto_minmax(0,1fr)] max-sm:gap-2 max-sm:p-2">
         <Strip
           items={atelier.items}
           failures={atelier.failures}
@@ -77,7 +77,7 @@ function Workspace({ atelier }: { atelier: Atelier }) {
           onNewSession={() => dispatch({ type: 'openOverlay', overlay: 'clear' })}
         />
 
-        <main className="flex min-h-0 min-w-0 flex-col gap-4">
+        <main className="flex min-h-0 min-w-0 flex-col gap-4 max-sm:gap-2">
           <Stage atelier={atelier} />
           <Composer atelier={atelier} promptRef={promptRef} />
         </main>
@@ -121,7 +121,7 @@ function Inspector({ atelier }: { atelier: Atelier }) {
       aria-label={t.stage.inspector}
       className={`flex min-h-0 flex-col overflow-hidden rounded-xs border border-hairline bg-solid ${
         state.sheetOpen
-          ? 'max-[1100px]:absolute max-[1100px]:inset-y-4 max-[1100px]:right-4 max-[1100px]:z-30 max-[1100px]:w-[288px]'
+          ? 'max-[1100px]:absolute max-[1100px]:inset-y-4 max-[1100px]:right-4 max-[1100px]:z-30 max-[1100px]:w-[288px] max-sm:inset-2 max-sm:w-auto'
           : 'max-[1100px]:hidden'
       }`}
     >
