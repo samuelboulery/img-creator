@@ -1,6 +1,7 @@
 import type { GalleryItem } from '@/lib/types'
 import { DEFAULT_PRICING, type Pricing } from './cost'
 import { packSession, type PackedSession } from './session-store'
+import { LANGS, type Lang } from '@/lib/i18n/langs'
 
 /**
  * L'app n'a ni serveur ni base : localStorage est la seule persistance.
@@ -24,16 +25,30 @@ Précise ce qui est implicite : cadrage, focale, source et qualité de lumière,
 Une seule phrase dense, sans liste, sans adjectif publicitaire, sans mention de marque ni de style d'artiste vivant.
 Renvoie uniquement le prompt réécrit.`
 
+export type Theme = 'dark' | 'light'
+
+/** Clé qui paie l'enrichissement du prompt. `text` = une clé à part. */
+export type EnrichKey = 'gemini' | 'openai' | 'text'
+
 export interface Prefs {
-  ambientEnabled: boolean
   pricing: Pricing
   enrichPrePrompt: string
+  enrichKey: EnrichKey
+  /** Sombre d'abord : la couleur d'une image se juge sur un neutre sombre. */
+  theme: Theme
+  lang: Lang
 }
 
 export const DEFAULT_PREFS: Prefs = {
-  ambientEnabled: true,
   pricing: DEFAULT_PRICING,
   enrichPrePrompt: ENRICH_PRE_PROMPT,
+  enrichKey: 'gemini',
+  theme: 'dark',
+  lang: 'fr',
+}
+
+function oneOf<T>(value: unknown, allowed: readonly T[], fallback: T): T {
+  return allowed.includes(value as T) ? (value as T) : fallback
 }
 
 function storage(): Storage | null {
@@ -112,10 +127,15 @@ export function writeString(key: string, value: string): void {
 }
 
 export function readPrefs(): Prefs {
-  const stored = readJson<Partial<Prefs>>(STORAGE_KEYS.prefs, {})
+  const stored = readJson<Partial<Record<keyof Prefs, unknown>>>(STORAGE_KEYS.prefs, {})
+  const pricing = typeof stored.pricing === 'object' && stored.pricing !== null ? stored.pricing : {}
+
   return {
-    ...DEFAULT_PREFS,
-    ...stored,
-    pricing: { ...DEFAULT_PREFS.pricing, ...stored.pricing },
+    pricing: { ...DEFAULT_PREFS.pricing, ...(pricing as Partial<Pricing>) },
+    enrichPrePrompt:
+      typeof stored.enrichPrePrompt === 'string' ? stored.enrichPrePrompt : DEFAULT_PREFS.enrichPrePrompt,
+    enrichKey: oneOf(stored.enrichKey, ['gemini', 'openai', 'text'] as const, DEFAULT_PREFS.enrichKey),
+    theme: oneOf(stored.theme, ['dark', 'light'] as const, DEFAULT_PREFS.theme),
+    lang: oneOf(stored.lang, LANGS, DEFAULT_PREFS.lang),
   }
 }

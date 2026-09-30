@@ -37,11 +37,26 @@ describe('storage', () => {
     expect(window.localStorage.getItem(STORAGE_KEYS.textKey)).toBeNull()
   })
 
+  test('sans préférence enregistrée : sombre et français', () => {
+    const prefs = readPrefs()
+    expect(prefs.theme).toBe('dark')
+    expect(prefs.lang).toBe('fr')
+  })
+
+  test('une préférence inconnue retombe sur sa valeur par défaut', () => {
+    writeJson(STORAGE_KEYS.prefs, { theme: 'sepia', lang: 'de', enrichKey: 'x' })
+    const prefs = readPrefs()
+    expect(prefs.theme).toBe('dark')
+    expect(prefs.lang).toBe('fr')
+    expect(prefs.enrichKey).toBe('gemini')
+  })
+
   test('les préférences partielles sont complétées par les valeurs par défaut', () => {
-    writeJson(STORAGE_KEYS.prefs, { ambientEnabled: false })
+    writeJson(STORAGE_KEYS.prefs, { theme: 'light', lang: 'en' })
     const prefs = readPrefs()
 
-    expect(prefs.ambientEnabled).toBe(false)
+    expect(prefs.theme).toBe('light')
+    expect(prefs.lang).toBe('en')
     expect(prefs.pricing).toEqual(DEFAULT_PREFS.pricing)
     expect(prefs.enrichPrePrompt).toBe(DEFAULT_PREFS.enrichPrePrompt)
   })

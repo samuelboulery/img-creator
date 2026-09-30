@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { Eye, EyeSlash, Key } from '@phosphor-icons/react/dist/ssr'
-import Switch from '../panel/Switch'
 import { ADAPTERS } from '@/lib/adapters/capabilities'
 import type { Prefs } from '@/lib/atelier/storage'
 import type { KeyKind, AdapterId } from '@/lib/types'
@@ -100,13 +99,6 @@ export default function SettingsDrawer({
         onChange={(value) => onKeyChange('text', value)}
       />
 
-      <div className="rounded-button bg-section p-3">
-        <Switch
-          label="Fond réactif"
-          checked={prefs.ambientEnabled}
-          onChange={(checked) => onPrefsChange({ ...prefs, ambientEnabled: checked })}
-        />
-      </div>
 
       <div className="rounded-button bg-section p-3">
         <div className="flex items-center justify-between">

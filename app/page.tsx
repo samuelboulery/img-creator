@@ -15,7 +15,6 @@ import {
   Swap,
   WarningCircle,
 } from '@phosphor-icons/react/dist/ssr'
-import AmbientBackground from '@/components/atelier/AmbientBackground'
 import CanvasHeader from '@/components/atelier/CanvasHeader'
 import Composer from '@/components/atelier/Composer'
 import Drawer from '@/components/atelier/Drawer'
@@ -41,6 +40,7 @@ import { seedSession } from '@/lib/atelier/seed'
 import { toReferenceImage } from '@/lib/atelier/image-file'
 import { isPanelVisible } from '@/lib/atelier/reducer'
 import { useAtelier } from '@/lib/atelier/use-atelier'
+import { I18nProvider } from '@/lib/i18n'
 import type { DrawerId } from '@/lib/types'
 
 const DRAWER_TITLES: Record<DrawerId, string> = {
@@ -53,6 +53,13 @@ const DRAWER_TITLES: Record<DrawerId, string> = {
 export default function Home() {
   const atelier = useAtelier()
   const { state, dispatch, items, prefs } = atelier
+
+  // Thème et langue suivent les préférences ; le script de layout.tsx a déjà
+  // posé la bonne valeur avant la première peinture.
+  useEffect(() => {
+    document.documentElement.dataset.theme = prefs.theme
+    document.documentElement.lang = prefs.lang
+  }, [prefs.theme, prefs.lang])
 
   // ⌘K ouvre la palette, Échap referme ce qui est au-dessus.
   useEffect(() => {
@@ -199,14 +206,8 @@ export default function Home() {
       : 'session locale'
 
   return (
+    <I18nProvider lang={prefs.lang}>
     <div className="relative h-screen w-screen overflow-hidden">
-      <AmbientBackground
-        layers={items
-          .filter((item) => item.palette)
-          .map((item) => ({ id: item.id, palette: item.palette! }))}
-        selectedId={state.selectedId}
-        enabled={prefs.ambientEnabled}
-      />
 
       <div className="relative flex h-full gap-[10px] p-[10px]">
         <Rail
@@ -427,5 +428,6 @@ export default function Home() {
         )}
       </div>
     </div>
+    </I18nProvider>
   )
 }

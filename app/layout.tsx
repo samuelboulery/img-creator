@@ -1,40 +1,40 @@
 import type { Metadata, Viewport } from 'next'
-import { Space_Grotesk, IBM_Plex_Mono } from 'next/font/google'
+import { JetBrains_Mono, Space_Grotesk, Unbounded } from 'next/font/google'
 import './globals.css'
 
 const spaceGrotesk = Space_Grotesk({
   variable: '--font-space-grotesk',
-  weight: ['400', '500', '600'],
+  weight: ['400', '500', '600', '700'],
   subsets: ['latin'],
 })
 
-const plexMono = IBM_Plex_Mono({
-  variable: '--font-plex-mono',
+const jetbrainsMono = JetBrains_Mono({
+  variable: '--font-jetbrains-mono',
   weight: ['400', '500'],
   subsets: ['latin'],
 })
 
-const title = 'img-creator — Atelier'
+/** Titre d'accueil seulement. */
+const unbounded = Unbounded({
+  variable: '--font-unbounded',
+  weight: ['800'],
+  subsets: ['latin'],
+})
+
+const title = 'Obskura'
 const description =
-  "Atelier de génération d'images multi-modèles : un prompt, deux API (nano-banana-2, gpt-image-2), trois modes de travail et une comparaison A/B. Sans compte ni base de données — tout reste dans le navigateur."
+  "Un prompt entre, une image sort. Génération d'images multi-modèles (Nano Banana 2, GPT Image), avec votre propre clé. Sans compte ni base de données : tout reste dans le navigateur."
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://img-generator-app.netlify.app'),
-  title: { default: title, template: '%s — img-creator' },
+  title: { default: title, template: '%s — Obskura' },
   description,
-  applicationName: 'img-creator',
-  keywords: [
-    "génération d'images",
-    'IA',
-    'nano-banana-2',
-    'gpt-image-2',
-    'prompt',
-    'atelier',
-  ],
+  applicationName: 'Obskura',
+  keywords: ["génération d'images", 'IA', 'nano-banana-2', 'gpt-image-2', 'prompt'],
   openGraph: {
     type: 'website',
     locale: 'fr_FR',
-    siteName: 'img-creator',
+    siteName: 'Obskura',
     url: '/',
     title,
     description,
@@ -44,9 +44,15 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'dark',
-  themeColor: '#08090d',
+  colorScheme: 'dark light',
+  themeColor: '#121110',
 }
+
+/**
+ * Pose le thème et la langue avant la première peinture : sans lui, un
+ * utilisateur en clair verrait un éclair sombre à chaque chargement.
+ */
+const PREFS_SCRIPT = `try{var p=JSON.parse(localStorage.getItem('imgc.prefs')||'{}');var d=document.documentElement;if(p.theme==='light')d.dataset.theme='light';if(p.lang==='en')d.lang='en'}catch(e){}`
 
 export default function RootLayout({
   children,
@@ -56,9 +62,14 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${spaceGrotesk.variable} ${plexMono.variable} h-full antialiased`}
+      data-theme="dark"
+      suppressHydrationWarning
+      className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} ${unbounded.variable} h-full antialiased`}
     >
-      <body className="h-full bg-app text-body">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: PREFS_SCRIPT }} />
+      </head>
+      <body className="h-full">
         {children}
         <script
           async
