@@ -14,9 +14,9 @@ One prompt, several models, side by side — no account, no database, no server 
 
 [Quick start](#quick-start) · [Why](#why) · [Models](#models) · [How it works](#how-it-works) · [Français](README.fr.md)
 
-<img src="docs/screenshot.png" alt="Obskura: session strip, the selected image on the stage, the prompt composer and the settings inspector" width="900">
+<img src="docs/screenshots/01-fiche-image-screenmat.webp" alt="Obskura: session strip, the selected image on the stage, the prompt composer and the image sheet" width="900">
 
-<sub>Demo session: the visuals are drawn on a canvas by the screenshot script, not model output. Regenerate them with <code>node scripts/screenshots.mjs</code>.</sub>
+<sub>Framed with <a href="https://github.com/samuelboulery/screenmat">screenmat</a>. Demo session: the visuals are drawn on a canvas by the screenshot script, not model output. Regenerate them with <code>SCREENMAT=../screenmat node scripts/screenshots.mjs</code>.</sub>
 
 </div>
 
@@ -29,7 +29,7 @@ Most image-generation front-ends hide the request. You move a slider, something 
 Obskura does the opposite. **The inspector shows the real request body**, built by the same pure function the adapter sends. And it only shows the settings the selected model actually reads: switch model and the controls it ignores disappear, with a note saying what was added and removed. What you see is what leaves your browser.
 
 <div align="center">
-<img src="docs/screenshot-json.png" alt="The Advanced section of the inspector showing the exact request body" width="900">
+<img src="docs/screenshots/11-requete-screenmat.webp" alt="The Advanced section of the inspector showing the exact request body" width="900">
 </div>
 
 ## Features
@@ -46,6 +46,24 @@ Obskura does the opposite. **The inspector shows the real request body**, built 
 - **Paper and ink** — dark first, light second, French and English; the chrome carries no colour, so the images keep all of it.
 - **Local cost estimate** — a per-image price you can edit; the app queries no pricing API.
 - **Keyboard first** — <kbd>⌘↵</kbd> generates, <kbd>⌘K</kbd> opens every action, <kbd>?</kbd> lists the shortcuts.
+
+## A tour
+
+| | |
+|---|---|
+| <img src="docs/screenshots/02-comparaison-screenmat.webp" alt="Two images of the same prompt side by side, with the list of differences" width="440"> | <img src="docs/screenshots/07-en-parallele-screenmat.webp" alt="Nano Banana 2 and GPT Image 2.5 Sunburst generating in parallel" width="440"> |
+| **Compare** — two images side by side, every difference listed. | **In parallel** — two models, one prompt, progress against their usual time. |
+| <img src="docs/screenshots/04-menu-modele-screenmat.webp" alt="The model menu, with key status, price per image and the in-parallel checkbox" width="440"> | <img src="docs/screenshots/03-export-screenmat.webp" alt="Four selected images in a grid, with the export options" width="440"> |
+| **Model menu** — key status, price per image, *in parallel*. | **Export** — original, PNG or JPEG, with a settings manifest. |
+| <img src="docs/screenshots/08-cle-demandee-screenmat.webp" alt="The stage asking for a Google key on first Generate" width="440"> | <img src="docs/screenshots/05-palette-screenmat.webp" alt="The ⌘K command palette filtered on gpt" width="440"> |
+| **First contact** — the key is asked for on the stage; nothing is sent. | **⌘K** — every action, model, preset and preference. |
+| <img src="docs/screenshots/06-historique-screenmat.webp" alt="The history drawer with search and model filter" width="440"> | <img src="docs/screenshots/09-light-en-screenmat.webp" alt="The light theme in English" width="440"> |
+| **History** — search, filter by model, prompt changes as a diff. | **Light theme, English** — paper and ink both ways. |
+
+<div align="center">
+<img src="docs/screenshots/10-mobile-screenmat.webp" alt="Obskura on a phone: the strip becomes a row above the stage" width="440">
+<br><sub>Under 640 px the strip becomes a row and the inspector opens as a sheet.</sub>
+</div>
 
 ## Quick start
 
