@@ -38,18 +38,32 @@ describe('atelierReducer', () => {
     expect(isPanelVisible(withDrawer)).toBe(false)
   })
 
-  test('la bascule de modèle cycle sur les quatre adapters', () => {
-    const s1 = atelierReducer(initialAtelierState, { type: 'toggleAdapter' })
-    expect(s1.adapterId).toBe('gpt-image-2')
+  test('choisir un modèle le pose, sans toucher au parallèle', () => {
+    const state = reduce(
+      initialAtelierState,
+      { type: 'setParallel', adapterId: 'gpt-image-2' },
+      { type: 'setAdapter', adapterId: 'gpt-image-2.5-flare' }
+    )
+    expect(state.adapterId).toBe('gpt-image-2.5-flare')
+    expect(state.parallelId).toBe('gpt-image-2')
+  })
 
-    const s2 = atelierReducer(s1, { type: 'toggleAdapter' })
-    expect(s2.adapterId).toBe('gpt-image-2.5-sunburst')
+  test('le modèle principal ne peut pas tourner en parallèle de lui-même', () => {
+    const state = atelierReducer(initialAtelierState, {
+      type: 'setParallel',
+      adapterId: initialAtelierState.adapterId,
+    })
+    expect(state.parallelId).toBeNull()
+  })
 
-    const s3 = atelierReducer(s2, { type: 'toggleAdapter' })
-    expect(s3.adapterId).toBe('gpt-image-2.5-flare')
-
-    const s4 = atelierReducer(s3, { type: 'toggleAdapter' })
-    expect(s4.adapterId).toBe('nano-banana-2')
+  test('choisir comme principal le modèle parallèle retire le parallèle', () => {
+    const state = reduce(
+      initialAtelierState,
+      { type: 'setParallel', adapterId: 'gpt-image-2' },
+      { type: 'setAdapter', adapterId: 'gpt-image-2' }
+    )
+    expect(state.adapterId).toBe('gpt-image-2')
+    expect(state.parallelId).toBeNull()
   })
 
   test('closeOverlays ferme le plein écran et la palette sans toucher au reste', () => {
@@ -64,16 +78,5 @@ describe('atelierReducer', () => {
     expect(state.viewerOpen).toBe(false)
     expect(state.cmdOpen).toBe(false)
     expect(state.openDrawer).toBe('recipes')
-  })
-
-  test('les sections se replient indépendamment, sans muter l’état initial', () => {
-    const state = atelierReducer(initialAtelierState, {
-      type: 'toggleSection',
-      section: 'render',
-    })
-
-    expect(state.openSections.render).toBe(true)
-    expect(initialAtelierState.openSections.render).toBe(false)
-    expect(state.openSections.references).toBe(true)
   })
 })

@@ -19,9 +19,6 @@ export type Mode = 'explore' | 'iterate' | 'produce' | 'ab'
 /** Tiroirs du rail — un seul ouvert à la fois. */
 export type DrawerId = 'history' | 'recipes' | 'enrich' | 'settings'
 
-/** Onglets du panneau de paramètres. */
-export type PanelTab = 'recipe' | 'json'
-
 /** Les trois clés que l'utilisateur peut enregistrer dans son navigateur. */
 export type KeyKind = 'gemini' | 'openai' | 'text'
 

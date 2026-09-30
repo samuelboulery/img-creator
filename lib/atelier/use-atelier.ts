@@ -2,6 +2,7 @@
 
 import { useEffect, useReducer, useState } from 'react'
 import { classifyClientError } from './error-kind'
+import { fitParams, modelChanges, MODELS } from '@/lib/adapters/capabilities'
 import { drawSeed, resolveSeed } from '@/lib/adapters/shared'
 import { estimateCost } from './cost'
 import { toImageState, toReferenceImage } from './image-file'
@@ -32,12 +33,9 @@ import type {
   Recipe,
 } from '@/lib/types'
 
-const KEY_OF_ADAPTER: Record<AdapterId, KeyKind> = {
-  'nano-banana-2': 'gemini',
-  'gpt-image-2': 'openai',
-  'gpt-image-2.5-sunburst': 'openai',
-  'gpt-image-2.5-flare': 'openai',
-}
+export type ModelNote = ReturnType<typeof modelChanges>
+
+const keyOf = (adapterId: AdapterId): KeyKind => MODELS[adapterId].keyKind
 
 const KEY_STORAGE: Record<KeyKind, string> = {
   gemini: STORAGE_KEYS.geminiKey,
@@ -94,6 +92,8 @@ export function useAtelier() {
     errorB: null,
     running: false,
   })
+  /** Ce que le dernier changement de modèle a ajouté ou retiré de l'inspecteur. */
+  const [modelNote, setModelNote] = useState<ModelNote | null>(null)
   const [hydrated, setHydrated] = useState(false)
   /**
    * Ce que la dernière écriture a réellement gardé — affiché dans l'en-tête. On
@@ -197,8 +197,37 @@ export function useAtelier() {
     setActiveRecipeId(null)
   }
 
+  /**
+   * Change de modèle et recale les réglages sur ce qu'il accepte — et sur ce
+   * qu'accepte le modèle parallèle, qui reçoit les mêmes.
+   */
+  function selectModel(adapterId: AdapterId) {
+    if (adapterId === state.adapterId) return
+    const parallel = state.parallelId === adapterId ? null : state.parallelId
+
+    setModelNote(modelChanges(state.adapterId, adapterId))
+    dispatch({ type: 'setAdapter', adapterId })
+    setParams((previous) => {
+      const fitted = fitParams(previous, adapterId)
+      return parallel ? fitParams(fitted, parallel) : fitted
+    })
+  }
+
+  function setParallel(adapterId: AdapterId | null) {
+    dispatch({ type: 'setParallel', adapterId })
+    if (adapterId && adapterId !== state.adapterId) {
+      setParams((previous) => fitParams(previous, adapterId))
+    }
+  }
+
+  /** Le preset reste enregistré ; les réglages courants cessent d'y être liés. */
+  function detachRecipe() {
+    setActiveRecipeId(null)
+    setPromptSuffix('')
+  }
+
   function hasKeyFor(adapterId: AdapterId): boolean {
-    return keys[KEY_OF_ADAPTER[adapterId]].trim().length > 0
+    return keys[keyOf(adapterId)].trim().length > 0
   }
 
   function buildRequest(
@@ -265,7 +294,7 @@ export function useAtelier() {
     const effectiveSeed = resolveSeed(params, drawnSeed)
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-    const key = keys[KEY_OF_ADAPTER[adapterId]]
+    const key = keys[keyOf(adapterId)]
     if (key) headers['x-api-key'] = key
 
     try {
@@ -384,6 +413,10 @@ export function useAtelier() {
     applyRecipe,
     saveCurrentRecipe,
     resetParams,
+    selectModel,
+    setParallel,
+    modelNote,
+    detachRecipe,
     keys,
     setKey,
     hasKeyFor,
@@ -400,3 +433,5 @@ export function useAtelier() {
     compare,
   }
 }
+
+export type Atelier = ReturnType<typeof useAtelier>

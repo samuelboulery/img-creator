@@ -1,4 +1,4 @@
-import type { AdapterId, DrawerId, Mode, PanelTab } from '@/lib/types'
+import type { AdapterId, DrawerId, Mode } from '@/lib/types'
 
 /**
  * Ce que l'utilisateur peut faire de l'erreur. `missing-key` est le seul cas où
@@ -13,10 +13,10 @@ export type ErrorKind = 'missing-key' | 'generic' | null
 export interface AtelierState {
   mode: Mode
   adapterId: AdapterId
+  /** Second modèle lancé à chaque Générer, ou null. */
+  parallelId: AdapterId | null
   selectedId: string | null
   openDrawer: DrawerId | null
-  panelTab: PanelTab
-  openSections: Record<string, boolean>
   viewerOpen: boolean
   cmdOpen: boolean
   error: string | null
@@ -32,21 +32,12 @@ export interface AtelierState {
   panelOpen: boolean
 }
 
-export const DEFAULT_OPEN_SECTIONS: Record<string, boolean> = {
-  references: true,
-  framing: true,
-  render: false,
-  people: false,
-  raw: false,
-}
-
 export const initialAtelierState: AtelierState = {
   mode: 'explore',
   adapterId: 'nano-banana-2',
+  parallelId: null,
   selectedId: null,
   openDrawer: null,
-  panelTab: 'recipe',
-  openSections: DEFAULT_OPEN_SECTIONS,
   viewerOpen: false,
   cmdOpen: false,
   error: null,
@@ -58,12 +49,10 @@ export const initialAtelierState: AtelierState = {
 export type AtelierAction =
   | { type: 'setMode'; mode: Mode }
   | { type: 'setAdapter'; adapterId: AdapterId }
-  | { type: 'toggleAdapter' }
+  | { type: 'setParallel'; adapterId: AdapterId | null }
   | { type: 'select'; id: string | null }
   | { type: 'toggleDrawer'; drawer: DrawerId }
   | { type: 'closeDrawer' }
-  | { type: 'setPanelTab'; tab: PanelTab }
-  | { type: 'toggleSection'; section: string }
   | { type: 'openViewer' }
   | { type: 'closeViewer' }
   | { type: 'toggleCmd' }
@@ -73,23 +62,24 @@ export type AtelierAction =
   | { type: 'selectSheet'; ids: string[] }
   | { type: 'togglePanel' }
 
-const OTHER_ADAPTER: Record<AdapterId, AdapterId> = {
-  'nano-banana-2': 'gpt-image-2',
-  'gpt-image-2': 'gpt-image-2.5-sunburst',
-  'gpt-image-2.5-sunburst': 'gpt-image-2.5-flare',
-  'gpt-image-2.5-flare': 'nano-banana-2',
-}
-
 export function atelierReducer(state: AtelierState, action: AtelierAction): AtelierState {
   switch (action.type) {
     case 'setMode':
       return { ...state, mode: action.mode }
 
+    // Le modèle parallèle promu en principal cesse d'être parallèle.
     case 'setAdapter':
-      return { ...state, adapterId: action.adapterId }
+      return {
+        ...state,
+        adapterId: action.adapterId,
+        parallelId: state.parallelId === action.adapterId ? null : state.parallelId,
+      }
 
-    case 'toggleAdapter':
-      return { ...state, adapterId: OTHER_ADAPTER[state.adapterId] }
+    case 'setParallel':
+      return {
+        ...state,
+        parallelId: action.adapterId === state.adapterId ? null : action.adapterId,
+      }
 
     case 'select':
       return { ...state, selectedId: action.id }
@@ -103,18 +93,6 @@ export function atelierReducer(state: AtelierState, action: AtelierAction): Atel
 
     case 'closeDrawer':
       return { ...state, openDrawer: null }
-
-    case 'setPanelTab':
-      return { ...state, panelTab: action.tab }
-
-    case 'toggleSection':
-      return {
-        ...state,
-        openSections: {
-          ...state.openSections,
-          [action.section]: !state.openSections[action.section],
-        },
-      }
 
     case 'openViewer':
       return { ...state, viewerOpen: true }

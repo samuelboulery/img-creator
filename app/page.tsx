@@ -31,9 +31,8 @@ import Produce from '@/components/atelier/modes/Produce'
 import CommandPalette, { type Command } from '@/components/atelier/overlays/CommandPalette'
 import Onboarding from '@/components/atelier/overlays/Onboarding'
 import Viewer from '@/components/atelier/overlays/Viewer'
-import JsonTab from '@/components/atelier/panel/JsonTab'
-import RecipeTab from '@/components/atelier/panel/RecipeTab'
-import SettingsPanel from '@/components/atelier/panel/SettingsPanel'
+import SettingsInspector from '@/components/atelier/inspector/SettingsInspector'
+import { ADAPTERS } from '@/lib/adapters/capabilities'
 import { downloadImage, downloadJson, exportSheet } from '@/lib/atelier/export'
 import { createRecipe, serializeRecipes } from '@/lib/atelier/recipes'
 import { seedSession } from '@/lib/atelier/seed'
@@ -41,13 +40,18 @@ import { toReferenceImage } from '@/lib/atelier/image-file'
 import { isPanelVisible } from '@/lib/atelier/reducer'
 import { useAtelier } from '@/lib/atelier/use-atelier'
 import { I18nProvider } from '@/lib/i18n'
-import type { DrawerId } from '@/lib/types'
+import type { AdapterId, DrawerId } from '@/lib/types'
 
 const DRAWER_TITLES: Record<DrawerId, string> = {
   history: 'Historique',
   recipes: 'Bibliothèque de recettes',
   enrich: 'Enrichissement du prompt',
   settings: 'Clés & préférences',
+}
+
+// ponytail: cycle provisoire du bouton de l'en-tête, remplacé par le menu Modèle au lot 4.
+function nextAdapter(current: AdapterId): AdapterId {
+  return ADAPTERS[(ADAPTERS.indexOf(current) + 1) % ADAPTERS.length]
 }
 
 export default function Home() {
@@ -89,7 +93,7 @@ export default function Home() {
         label: 'Changer de modèle',
         shortcut: 'M',
         icon: Swap,
-        run: () => dispatch({ type: 'toggleAdapter' }),
+        run: () => atelier.selectModel(nextAdapter(state.adapterId)),
       },
       {
         id: 'compare',
@@ -185,7 +189,7 @@ export default function Home() {
           }),
       },
     ],
-    [atelier, dispatch]
+    [atelier, dispatch, state.adapterId]
   )
 
   const needsOnboarding = atelier.onboarding
@@ -269,7 +273,7 @@ export default function Home() {
             mode={state.mode}
             adapterId={state.adapterId}
             onModeChange={(mode) => dispatch({ type: 'setMode', mode })}
-            onToggleAdapter={() => dispatch({ type: 'toggleAdapter' })}
+            onToggleAdapter={() => atelier.selectModel(nextAdapter(state.adapterId))}
             onOpenCommandPalette={() => dispatch({ type: 'toggleCmd' })}
             onTogglePanel={() => dispatch({ type: 'togglePanel' })}
             panelOpen={state.panelOpen}
@@ -361,39 +365,19 @@ export default function Home() {
         </main>
 
         {isPanelVisible(state) && (
-          <div
-            // Sous 1100 px le panneau se replie derrière un bouton et revient
-            // en surcouche : c'est le canvas qui garde sa place.
-            className={
+          <aside
+            aria-label="Réglages"
+            className={`w-[288px] shrink-0 flex-col overflow-hidden rounded-xs border border-hairline bg-solid ${
               state.panelOpen
                 ? 'flex max-[1100px]:absolute max-[1100px]:inset-y-[10px] max-[1100px]:right-[10px] max-[1100px]:z-30'
                 : 'flex max-[1100px]:hidden'
-            }
+            }`}
           >
-            <SettingsPanel
-            tab={state.panelTab}
-            onTabChange={(tab) => dispatch({ type: 'setPanelTab', tab })}
-            onReset={atelier.resetParams}
-            keysSummary={`image ×${atelier.imageKeyCount} · texte ×${
-              atelier.keys.text ? 1 : 0
-            } · ce navigateur`}
-          >
-            {state.panelTab === 'recipe' ? (
-              <RecipeTab
-                adapterId={state.adapterId}
-                params={atelier.params}
-                onParamsChange={atelier.setParams}
-                recipe={atelier.recipe}
-                onRecipeChange={atelier.setRecipe}
-                openSections={state.openSections}
-                onToggleSection={(section) => dispatch({ type: 'toggleSection', section })}
-                activeRecipeName={atelier.activeRecipe?.name ?? null}
-              />
-            ) : (
-              <JsonTab request={atelier.buildRequest(atelier.prompt || '…')} />
-            )}
-            </SettingsPanel>
-          </div>
+            <SettingsInspector
+              atelier={atelier}
+              onOpenKeys={() => dispatch({ type: 'toggleDrawer', drawer: 'settings' })}
+            />
+          </aside>
         )}
         {state.cmdOpen && (
           <CommandPalette
