@@ -35,6 +35,8 @@ import type {
 const KEY_OF_ADAPTER: Record<AdapterId, KeyKind> = {
   'nano-banana-2': 'gemini',
   'gpt-image-2': 'openai',
+  'gpt-image-2.5-sunburst': 'openai',
+  'gpt-image-2.5-flare': 'openai',
 }
 
 const KEY_STORAGE: Record<KeyKind, string> = {

@@ -8,7 +8,12 @@ export type PayloadParam = Exclude<keyof GenerationParams, 'seedLock'>
  * qu'ajouter un modèle ici force le compilateur à signaler chaque endroit qui
  * doit suivre.
  */
-export const ADAPTERS = ['nano-banana-2', 'gpt-image-2'] as const
+export const ADAPTERS = [
+  'nano-banana-2',
+  'gpt-image-2',
+  'gpt-image-2.5-sunburst',
+  'gpt-image-2.5-flare',
+] as const
 
 export const ALL_PARAMS: readonly PayloadParam[] = [
   'aspectRatio',
@@ -46,6 +51,28 @@ const SUPPORTED: Record<AdapterId, readonly PayloadParam[]> = {
     'extraParams',
   ],
   'gpt-image-2': [
+    'aspectRatio',
+    'resolution',
+    'batch',
+    'fileFormat',
+    'transparent',
+    'compression',
+    'moderation',
+    'language',
+    'extraParams',
+  ],
+  'gpt-image-2.5-sunburst': [
+    'aspectRatio',
+    'resolution',
+    'batch',
+    'fileFormat',
+    'transparent',
+    'compression',
+    'moderation',
+    'language',
+    'extraParams',
+  ],
+  'gpt-image-2.5-flare': [
     'aspectRatio',
     'resolution',
     'batch',
@@ -106,6 +133,28 @@ const PARAM_PATHS: Record<AdapterId, Partial<Record<PayloadParam, string | null>
     extraParams: null,
   },
   'gpt-image-2': {
+    aspectRatio: 'size',
+    resolution: 'quality',
+    batch: 'n',
+    fileFormat: 'output_format',
+    transparent: 'background',
+    compression: 'output_compression',
+    moderation: 'moderation',
+    language: null,
+    extraParams: null,
+  },
+  'gpt-image-2.5-sunburst': {
+    aspectRatio: 'size',
+    resolution: 'quality',
+    batch: 'n',
+    fileFormat: 'output_format',
+    transparent: 'background',
+    compression: 'output_compression',
+    moderation: 'moderation',
+    language: null,
+    extraParams: null,
+  },
+  'gpt-image-2.5-flare': {
     aspectRatio: 'size',
     resolution: 'quality',
     batch: 'n',

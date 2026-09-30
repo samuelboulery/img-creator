@@ -9,7 +9,7 @@ import type {
   Resolution,
 } from '@/lib/types'
 
-const MODEL_ID = 'gpt-image-2'
+const MODEL_ID = 'gpt-image-2.5-sunburst'
 
 /** Formats OpenAI, handoff « Mapping API ». */
 const SIZES: Record<string, string> = {
@@ -19,13 +19,12 @@ const SIZES: Record<string, string> = {
   '4:3': '1280x960',
 }
 
-// ponytail: 6K/8K non supportés ici — pruneUnsupported les écarte, mais le Record<Resolution> doit rester exhaustif
 const QUALITIES: Record<Resolution, string> = {
   '1K': 'low',
   '2K': 'medium',
   '4K': 'high',
-  '6K': 'high',
-  '8K': 'high',
+  '6K': 'xhigh',
+  '8K': 'max',
 }
 
 /**
@@ -33,7 +32,7 @@ const QUALITIES: Record<Resolution, string> = {
  * — d'où l'index signature, qui dit la vérité plutôt que de la masquer sous
  * une assertion.
  */
-export type GptImage2Payload = {
+export type GptImage25SunburstPayload = {
   model: string
   prompt: string
   n: number
@@ -47,7 +46,9 @@ export type GptImage2Payload = {
 } & Record<string, unknown>
 
 /** Corps exact envoyé au modèle — même fonction pour l'envoi et pour l'onglet JSON. */
-export function buildGptImage2Payload(request: GenerationRequest): GptImage2Payload {
+export function buildGptImage25SunburstPayload(
+  request: GenerationRequest
+): GptImage25SunburstPayload {
   const { params } = request
   const negative = mergeNegatives(request.negative, request.recipeNegative)
   const connector = params.language === 'fr' ? 'À éviter :' : 'Avoid:'
@@ -71,20 +72,22 @@ export function buildGptImage2Payload(request: GenerationRequest): GptImage2Payl
     quality: QUALITIES[params.resolution],
     background: params.transparent ? 'transparent' : 'opaque',
     output_format: params.fileFormat,
-    // Le PNG n'a pas de compression.
     output_compression: params.fileFormat === 'png' ? null : params.compression,
     moderation: params.moderation,
     image: references.map((image) => image.base64),
   }
 
-  return mergeExtraParams(pruneUnsupported('gpt-image-2', payload), params.extraParams)
+  return mergeExtraParams(
+    pruneUnsupported('gpt-image-2.5-sunburst', payload),
+    params.extraParams
+  )
 }
 
 async function referenceToFile(image: ReferenceImage, name: string) {
   return toFile(Buffer.from(image.base64, 'base64'), name, { type: image.mimeType })
 }
 
-export const gptImage2Adapter: GenerateImageAdapter = {
+export const gptImage25SunburstAdapter: GenerateImageAdapter = {
   async generate(
     request: GenerationRequest,
     apiKeyOverride?: string
@@ -97,13 +100,10 @@ export const gptImage2Adapter: GenerateImageAdapter = {
     }
 
     const openai = new OpenAI({ apiKey })
-    const payload = buildGptImage2Payload(request)
+    const payload = buildGptImage25SunburstPayload(request)
 
     const references = [...(request.subjectImages ?? []), ...(request.styleImages ?? [])]
 
-    // `images.generate` et `images.edit` ont des signatures distinctes : les
-    // champs communs sont typés une fois, chaque appel reçoit les siens. Le
-    // `any` précédent masquait cette divergence au lieu de la traiter.
     const common = {
       model: payload.model,
       prompt: payload.prompt,
@@ -138,7 +138,7 @@ export const gptImage2Adapter: GenerateImageAdapter = {
         mimeType: `image/${payload.output_format}`,
       }))
 
-    if (images.length === 0) throw new Error('No image returned from gpt-image-2')
+    if (images.length === 0) throw new Error('No image returned from gpt-image-2.5-sunburst')
 
     return images
   },

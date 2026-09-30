@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { nanoBanana2Adapter } from '@/lib/adapters/nano-banana-2'
 import { gptImage2Adapter } from '@/lib/adapters/gpt-image-2'
+import { gptImage25SunburstAdapter } from '@/lib/adapters/gpt-image-2.5-sunburst'
+import { gptImage25FlareAdapter } from '@/lib/adapters/gpt-image-2.5-flare'
 import { toClientMessage } from '@/lib/adapters/errors'
 import {
   BadRequestError,
@@ -14,6 +16,8 @@ import type { AdapterId, GenerateImageAdapter, GenerateResponse } from '@/lib/ty
 const ADAPTERS: Record<AdapterId, GenerateImageAdapter> = {
   'nano-banana-2': nanoBanana2Adapter,
   'gpt-image-2': gptImage2Adapter,
+  'gpt-image-2.5-sunburst': gptImage25SunburstAdapter,
+  'gpt-image-2.5-flare': gptImage25FlareAdapter,
 }
 
 /** Une génération 4K peut être longue ; au-delà, la connexion est perdue pour rien. */

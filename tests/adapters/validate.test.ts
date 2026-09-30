@@ -57,7 +57,7 @@ describe('validation en frontière', () => {
 
   test.each([
     ['aspectRatio', '3:2'],
-    ['resolution', '8K'],
+    ['resolution', '10K'],
     ['fileFormat', 'gif'],
     ['language', 'de'],
   ])('%s hors énumération est rejeté', (champ, valeur) => {

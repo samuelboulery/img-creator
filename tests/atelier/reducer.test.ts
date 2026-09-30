@@ -38,12 +38,18 @@ describe('atelierReducer', () => {
     expect(isPanelVisible(withDrawer)).toBe(false)
   })
 
-  test('la bascule de modèle alterne entre les deux adapters', () => {
-    const once = atelierReducer(initialAtelierState, { type: 'toggleAdapter' })
-    expect(once.adapterId).toBe('gpt-image-2')
+  test('la bascule de modèle cycle sur les quatre adapters', () => {
+    const s1 = atelierReducer(initialAtelierState, { type: 'toggleAdapter' })
+    expect(s1.adapterId).toBe('gpt-image-2')
 
-    const twice = atelierReducer(once, { type: 'toggleAdapter' })
-    expect(twice.adapterId).toBe('nano-banana-2')
+    const s2 = atelierReducer(s1, { type: 'toggleAdapter' })
+    expect(s2.adapterId).toBe('gpt-image-2.5-sunburst')
+
+    const s3 = atelierReducer(s2, { type: 'toggleAdapter' })
+    expect(s3.adapterId).toBe('gpt-image-2.5-flare')
+
+    const s4 = atelierReducer(s3, { type: 'toggleAdapter' })
+    expect(s4.adapterId).toBe('nano-banana-2')
   })
 
   test('closeOverlays ferme le plein écran et la palette sans toucher au reste', () => {

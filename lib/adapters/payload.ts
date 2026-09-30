@@ -1,4 +1,6 @@
 import { buildGptImage2Payload, type GptImage2Payload } from './gpt-image-2'
+import { buildGptImage25SunburstPayload } from './gpt-image-2.5-sunburst'
+import { buildGptImage25FlarePayload } from './gpt-image-2.5-flare'
 import { buildNanoBanana2Payload, type NanoBanana2Payload } from './nano-banana-2'
 import type { GenerationRequest } from '@/lib/types'
 
@@ -6,9 +8,12 @@ export type AdapterPayload = NanoBanana2Payload | GptImage2Payload
 
 /** Corps réel de la requête, pour le modèle sélectionné. */
 export function buildPayload(request: GenerationRequest): AdapterPayload {
-  return request.adapterId === 'gpt-image-2'
-    ? buildGptImage2Payload(request)
-    : buildNanoBanana2Payload(request)
+  switch (request.adapterId) {
+    case 'gpt-image-2': return buildGptImage2Payload(request)
+    case 'gpt-image-2.5-sunburst': return buildGptImage25SunburstPayload(request)
+    case 'gpt-image-2.5-flare': return buildGptImage25FlarePayload(request)
+    default: return buildNanoBanana2Payload(request)
+  }
 }
 
 /** Champs qui portent du base64 : `inlineData.data` côté Gemini, `image` côté OpenAI. */

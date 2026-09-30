@@ -19,13 +19,18 @@ import type {
  */
 
 export const ASPECT_RATIOS = ['1:1', '16:9', '9:16', '4:3'] as const
-export const RESOLUTIONS = ['1K', '2K', '4K'] as const
+export const RESOLUTIONS = ['1K', '2K', '4K', '6K', '8K'] as const
 export const BATCHES = [1, 2, 4, 8] as const
 export const FILE_FORMATS = ['png', 'jpeg', 'webp'] as const
 export const PERSON_GENERATIONS = ['allow_adult', 'allow_all', 'dont_allow'] as const
 export const MODERATIONS = ['auto', 'low'] as const
 export const LANGUAGES = ['auto', 'fr', 'en'] as const
-export const ADAPTER_IDS = ['nano-banana-2', 'gpt-image-2'] as const
+export const ADAPTER_IDS = [
+  'nano-banana-2',
+  'gpt-image-2',
+  'gpt-image-2.5-sunburst',
+  'gpt-image-2.5-flare',
+] as const
 
 /** Plafonds : ils bornent la mémoire du serveur et la facture de l'utilisateur. */
 export const MAX_PROMPT_CHARS = 8_000
