@@ -89,7 +89,7 @@ export default function SettingsDrawer({
       />
       <KeyCard
         title="OpenAI"
-        hint="gpt-image-2 · reste dans ce navigateur"
+        hint="gpt-image-2 · gpt-image-2.5-sunburst · gpt-image-2.5-flare · reste dans ce navigateur"
         value={keys.openai}
         onChange={(value) => onKeyChange('openai', value)}
       />

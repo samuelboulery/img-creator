@@ -32,7 +32,7 @@ export interface PendingTile {
 }
 
 export type AspectRatio = '1:1' | '16:9' | '9:16' | '4:3'
-export type Resolution = '1K' | '2K' | '4K'
+export type Resolution = '1K' | '2K' | '4K' | '6K' | '8K'
 export type Batch = 1 | 2 | 4 | 8
 export type FileFormat = 'png' | 'jpeg' | 'webp'
 export type PersonGeneration = 'allow_adult' | 'allow_all' | 'dont_allow'

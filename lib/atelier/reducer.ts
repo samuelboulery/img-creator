@@ -75,7 +75,9 @@ export type AtelierAction =
 
 const OTHER_ADAPTER: Record<AdapterId, AdapterId> = {
   'nano-banana-2': 'gpt-image-2',
-  'gpt-image-2': 'nano-banana-2',
+  'gpt-image-2': 'gpt-image-2.5-sunburst',
+  'gpt-image-2.5-sunburst': 'gpt-image-2.5-flare',
+  'gpt-image-2.5-flare': 'nano-banana-2',
 }
 
 export function atelierReducer(state: AtelierState, action: AtelierAction): AtelierState {
