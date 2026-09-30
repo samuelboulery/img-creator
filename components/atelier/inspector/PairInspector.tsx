@@ -5,7 +5,6 @@ import { ActionButton, InspectorHeader } from './ImageInspector'
 import { Section } from '@/components/atelier/ui'
 import { MODELS } from '@/lib/adapters/capabilities'
 import { pairDifferences, type PairKey } from '@/lib/atelier/diff'
-import { exportImages } from '@/lib/atelier/export'
 import type { Atelier } from '@/lib/atelier/use-atelier'
 import { useT } from '@/lib/i18n'
 import type { AdapterId, GalleryItem } from '@/lib/types'
@@ -52,7 +51,7 @@ export default function PairInspector({ pair, atelier }: { pair: [GalleryItem, G
             {t.pair.keepRight}
           </ActionButton>
           <p className="meta px-3 pb-1">{t.pair.keepNote}</p>
-          <ActionButton icon={DownloadSimpleIcon} keys={['mod', 'E']} onClick={() => void exportImages(pair, 'original', false)}>
+          <ActionButton icon={DownloadSimpleIcon} keys={['mod', 'E']} onClick={() => void atelier.exportItems(pair, 'original', false)}>
             {t.pair.downloadBoth}
           </ActionButton>
           <ActionButton icon={TrashIcon} variant="danger" keys={['⌫']} onClick={() => atelier.removeItems([left.id, right.id])}>

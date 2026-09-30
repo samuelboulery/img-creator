@@ -61,10 +61,11 @@ describe('sélection', () => {
     expect(state.focusId).toBe('a')
   })
 
-  test('une génération qui démarre libère la scène pour son cadre d’attente', () => {
+  test('une génération qui démarre vide la sélection mais garde l’image de repli', () => {
+    // Arrêtée sans résultat, la génération rend la scène à l'image montrée avant.
     const state = reduce(initialAtelierState, { type: 'select', id: 'a' }, { type: 'runStarted' })
     expect(state.selectedIds).toEqual([])
-    expect(state.focusId).toBeNull()
+    expect(state.focusId).toBe('a')
   })
 
   test('une génération qui aboutit montre l’image sans quitter les réglages', () => {

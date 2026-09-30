@@ -86,8 +86,10 @@ export function atelierReducer(state: AtelierState, action: AtelierAction): Atel
     case 'clearSelection':
       return clearSelection(state)
 
+    // La scène montre l'attente avant l'image de repli (voir Stage) : garder
+    // `focusId` rend l'image d'avant si la génération est arrêtée.
     case 'runStarted':
-      return { ...state, selectedIds: [], focusId: null, keyPrompt: null }
+      return { ...state, selectedIds: [], focusId: state.selectedIds[0] ?? state.focusId, keyPrompt: null }
 
     // Une sélection faite pendant l'attente l'emporte sur l'image qui arrive.
     case 'arrived': {

@@ -1,6 +1,5 @@
 import type { Command } from './overlays/CommandPalette'
 import { ADAPTERS, MODELS } from '@/lib/adapters/capabilities'
-import { exportImages } from '@/lib/atelier/export'
 import { resolveSelection } from '@/lib/atelier/session-view'
 import type { Atelier } from '@/lib/atelier/use-atelier'
 import type { Dict } from '@/lib/i18n/fr'
@@ -17,7 +16,7 @@ export function buildCommands(atelier: Atelier, t: Dict): Command[] {
   const actions: Command[] = [
     { id: 'generate', group: p.actions, label: t.composer.generate, keys: ['mod', '↵'], run: () => void atelier.generate() },
     ...(images.length > 0
-      ? [{ id: 'export', group: p.actions, label: p.exportSelection, keys: ['mod', 'E'], run: () => void exportImages(images, 'original', true) }]
+      ? [{ id: 'export', group: p.actions, label: p.exportSelection, keys: ['mod', 'E'], run: () => void atelier.exportItems(images, 'original', true) }]
       : []),
     ...(images.length === 1
       ? [{ id: 'vary', group: p.actions, label: p.varySelected, keys: ['V'], run: () => void atelier.vary(images[0]) }]

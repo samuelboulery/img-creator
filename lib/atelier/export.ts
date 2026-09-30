@@ -12,7 +12,8 @@ function download(blob: Blob, filename: string) {
   link.href = url
   link.download = filename
   link.click()
-  URL.revokeObjectURL(url)
+  // Révoquer tout de suite peut annuler le téléchargement (Safari, Firefox).
+  setTimeout(() => URL.revokeObjectURL(url), 10_000)
 }
 
 function base64ToBlob(base64: string, mimeType: string): Blob {

@@ -273,3 +273,16 @@ test('le thème et la langue se choisissent et survivent au rechargement', async
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('button', { name: 'Switch to dark theme' })).toBeVisible()
 })
+
+test('Échap dans le prompt garde la fiche ouverte', async ({ page }) => {
+  await withKey(page)
+  await mockGenerate(page)
+  await page.goto('/')
+  await generate(page, 'un cerf-volant')
+  await strip(page).getByRole('button', { name: /un cerf-volant/ }).click()
+
+  const inspector = page.getByRole('complementary', { name: 'Inspecteur' })
+  await page.getByLabel('Prompt', { exact: true }).focus()
+  await page.keyboard.press('Escape')
+  await expect(inspector.getByRole('button', { name: 'Reprendre les réglages' })).toBeVisible()
+})

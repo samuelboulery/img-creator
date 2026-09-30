@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { DownloadSimpleIcon, TrashIcon } from '@phosphor-icons/react/dist/ssr'
 import { ActionButton, InspectorHeader } from './ImageInspector'
 import { Section, Segmented, Toggle } from '@/components/atelier/ui'
-import { exportImages, type ExportFormat } from '@/lib/atelier/export'
+import type { ExportFormat } from '@/lib/atelier/export'
 import type { Atelier } from '@/lib/atelier/use-atelier'
 import { useT } from '@/lib/i18n'
 import type { GalleryItem } from '@/lib/types'
@@ -21,16 +21,6 @@ export default function MultiInspector({ items, ids, atelier }: MultiInspectorPr
   const t = useT()
   const [format, setFormat] = useState<ExportFormat>('original')
   const [withSettings, setWithSettings] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  async function runExport() {
-    try {
-      setError(null)
-      await exportImages(items, format, withSettings)
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught))
-    }
-  }
 
   return (
     <>
@@ -48,7 +38,6 @@ export default function MultiInspector({ items, ids, atelier }: MultiInspectorPr
             onChange={setFormat}
           />
           <Toggle label={t.multi.withSettings} checked={withSettings} onChange={setWithSettings} />
-          {error && <p className="meta text-danger">{error}</p>}
         </Section>
 
         {ids.length !== 2 && (
@@ -62,7 +51,7 @@ export default function MultiInspector({ items, ids, atelier }: MultiInspectorPr
             icon={DownloadSimpleIcon}
             keys={['mod', 'E']}
             disabled={items.length === 0}
-            onClick={() => void runExport()}
+            onClick={() => void atelier.exportItems(items, format, withSettings)}
           >
             {t.multi.download(items.length)}
           </ActionButton>

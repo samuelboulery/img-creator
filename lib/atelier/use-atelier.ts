@@ -6,6 +6,7 @@ import { fitParams, modelChanges, MODELS } from '@/lib/adapters/capabilities'
 import { drawSeed, resolveSeed } from '@/lib/adapters/shared'
 import { MAX_REFERENCE_IMAGES } from '@/lib/adapters/validate'
 import { estimateCost } from './cost'
+import { exportImages, type ExportFormat } from './export'
 import { readImageFile, toImageState, toReferenceImage } from './image-file'
 import { extractPalette } from './palette'
 import { DEFAULT_PARAMS, DEFAULT_RECIPE_STATE, normalizeParams, type RecipeState } from './params'
@@ -440,7 +441,14 @@ export function useAtelier() {
     void generate()
   }
 
-  /** « Varier ×4 » : quatre variantes réelles de l'image, avec ses propres réglages. */
+  /**
+   * « Varier ×4 » : quatre variantes réelles de l'image, avec ses propres
+   * réglages, son prompt et son négatif.
+   *
+   * ponytail: les références et le preset sont ceux du moment, pas ceux de
+   * l'image — l'item ne les garde pas (trop lourds pour localStorage). Les
+   * stocker par item si varier une image ancienne doit être fidèle.
+   */
   async function vary(item: GalleryItem) {
     if (!keysRef.current[keyOf(item.adapterId)]) {
       dispatch({ type: 'askKey', adapterId: item.adapterId })
@@ -458,6 +466,10 @@ export function useAtelier() {
   }
 
   async function retry(failure: FailedRun, overrides: Partial<GenerationParams> = {}) {
+    if (!keysRef.current[keyOf(failure.adapterId)]) {
+      dispatch({ type: 'askKey', adapterId: failure.adapterId })
+      return
+    }
     setFailures((previous) => previous.filter((entry) => entry.id !== failure.id))
     dispatch({ type: 'forget', ids: [failure.id] })
     if (Object.keys(overrides).length > 0) setParams((previous) => ({ ...previous, ...overrides }))
@@ -576,6 +588,15 @@ export function useAtelier() {
     }
   }
 
+  /** Exporte des images ; un échec de conversion s'affiche dans la ligne d'état. */
+  async function exportItems(list: GalleryItem[], format: ExportFormat, withSettings: boolean) {
+    try {
+      await exportImages(list, format, withSettings)
+    } catch (error) {
+      setNotice({ kind: 'error', message: error instanceof Error ? error.message : String(error) })
+    }
+  }
+
   const undo = useCallback(() => {
     if (notice && 'undo' in notice) notice.undo()
   }, [notice])
@@ -625,6 +646,7 @@ export function useAtelier() {
     reuse,
     stop,
     removeItems,
+    exportItems,
     keepOnly,
     clearSession,
     enrich,

@@ -38,7 +38,13 @@ export default function PresetsMenu({ recipes, activeId, onApply, onSave, onDele
 
   async function importFile(file: File | undefined) {
     if (!file) return
-    const result = parseRecipesFile(await file.text())
+    let raw: string
+    try {
+      raw = await file.text()
+    } catch (caught) {
+      return setError(caught instanceof Error ? caught.message : String(caught))
+    }
+    const result = parseRecipesFile(raw)
     if (!result.ok) return setError(result.error)
     setError(null)
     onImport(mergeRecipes(recipes, result.recipes))
