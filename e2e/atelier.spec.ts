@@ -242,7 +242,7 @@ test('sous 1100 px, les réglages passent en feuille ouverte à la demande', asy
   await expect(inspector).toBeHidden()
 })
 
-for (const width of [375, 1024]) {
+for (const width of [360, 1024]) {
   test(`à ${width} px, rien ne déborde et Générer reste atteignable`, async ({ page }) => {
     await withKey(page)
     await mockGenerate(page)
@@ -259,3 +259,17 @@ for (const width of [375, 1024]) {
     await page.screenshot({ path: `test-results/obskura-${width}.png` })
   })
 }
+
+test('le thème et la langue se choisissent et survivent au rechargement', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+
+  await page.getByRole('button', { name: 'Passer au thème clair' }).click()
+  await page.getByRole('button', { name: 'English' }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('button', { name: 'Switch to dark theme' })).toBeVisible()
+})
