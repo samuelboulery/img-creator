@@ -39,7 +39,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<GenerateRespo
 
   if (!allowed) {
     return NextResponse.json(
-      { success: false, error: `Trop de requêtes — réessaie dans ${retryAfter}s` },
+      { success: false, error: `Trop de requêtes — réessayer dans ${retryAfter} s` },
       { status: 429, headers: { 'Retry-After': String(retryAfter) } }
     )
   }

@@ -106,15 +106,87 @@ test('un échec de clé propose la clé, pas un « Relancer » stérile', async 
   await expect(page.getByRole('form', { name: 'Coller une clé Google' })).toBeVisible()
 })
 
-test('⌘K ouvre la palette, Échap la ferme', async ({ page }) => {
+test('⌘K : choisir un modèle au clavier ; Échap ferme sans vider la sélection', async ({ page }) => {
   await page.goto('/')
 
   await page.keyboard.press('ControlOrMeta+k')
-  const palette = page.getByRole('dialog')
+  const palette = page.getByRole('dialog', { name: 'Actions' })
   await expect(palette).toBeVisible()
+  await page.keyboard.type('Flare')
+  await page.keyboard.press('Enter')
+  await expect(palette).toBeHidden()
+  await expect(page.getByRole('complementary', { name: 'Inspecteur' })).toContainText('GPT Image 2.5 Flare')
+
+  await page.keyboard.press('ControlOrMeta+k')
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog', { name: 'Actions' })).toBeHidden()
+})
+
+test('? ouvre les raccourcis', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('heading', { name: 'Décrire une image.' }).click()
+  await page.keyboard.press('Shift+?')
+  await expect(page.getByRole('dialog', { name: 'Raccourcis' })).toBeVisible()
+})
+
+test('Clés : une clé saisie dans le dialogue permet de générer', async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.clear())
+  const calls = await mockGenerate(page)
+  await page.goto('/')
+
+  await page.getByRole('button', { name: 'Clés' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Clés et tarifs' })
+  await dialog.getByLabel('Google AI Studio').fill('AIza-test')
+  await dialog.getByRole('button', { name: 'Fermer' }).click()
+
+  await generate(page, 'une tasse fumante')
+  await expect(page.getByAltText('une tasse fumante')).toBeVisible()
+  expect(calls).toHaveLength(1)
+})
+
+test('Presets : enregistrer les réglages, puis les réappliquer', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('radio', { name: '16:9' }).check({ force: true })
+
+  await page.getByRole('button', { name: 'Presets' }).click()
+  const menu = page.getByRole('dialog', { name: 'Presets' })
+  await menu.getByLabel('Nom du preset').fill('Paysage')
+  await menu.getByRole('button', { name: 'Enregistrer' }).click()
+  await expect(menu.getByRole('button', { name: /^Paysage/ })).toBeVisible()
 
   await page.keyboard.press('Escape')
-  await expect(palette).toBeHidden()
+  await page.getByRole('radio', { name: '1:1' }).check({ force: true })
+  await page.getByRole('button', { name: 'Presets' }).click()
+  await page.getByRole('dialog', { name: 'Presets' }).getByRole('button', { name: /^Paysage/ }).click()
+  await expect(page.getByRole('radio', { name: '16:9' })).toBeChecked()
+})
+
+test('Nouvelle session : confirmée, puis la bande est vide', async ({ page }) => {
+  await withKey(page)
+  await mockGenerate(page)
+  await page.goto('/')
+  await generate(page, 'un bol de riz')
+  await expect(page.getByAltText('un bol de riz')).toBeVisible()
+
+  await strip(page).getByRole('button', { name: 'Nouvelle session' }).click()
+  const confirm = page.getByRole('dialog', { name: 'Commencer une nouvelle session ?' })
+  await confirm.getByRole('button', { name: 'Vider la session' }).click()
+  await expect(strip(page)).toContainText('vide')
+})
+
+test('Historique : retrouver une image par son prompt', async ({ page }) => {
+  await withKey(page)
+  await mockGenerate(page)
+  await page.goto('/')
+  await generate(page, 'une lanterne en papier')
+  await expect(page.getByAltText('une lanterne en papier')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Historique' }).click()
+  const history = page.getByRole('dialog', { name: 'Historique' })
+  await history.getByLabel('Rechercher dans les prompts').fill('lanterne')
+  await history.getByRole('button', { name: /une lanterne en papier/ }).click()
+  await expect(history).toBeHidden()
+  await expect(page.getByRole('complementary', { name: 'Inspecteur' })).toContainText('une lanterne en papier')
 })
 
 test('⇧-clic sur deux vignettes : comparaison, puis garder une image (annulable)', async ({ page }) => {

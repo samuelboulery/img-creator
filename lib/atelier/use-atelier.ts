@@ -4,8 +4,9 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { classifyClientError } from './error-kind'
 import { fitParams, modelChanges, MODELS } from '@/lib/adapters/capabilities'
 import { drawSeed, resolveSeed } from '@/lib/adapters/shared'
+import { MAX_REFERENCE_IMAGES } from '@/lib/adapters/validate'
 import { estimateCost } from './cost'
-import { toImageState, toReferenceImage } from './image-file'
+import { readImageFile, toImageState, toReferenceImage } from './image-file'
 import { extractPalette } from './palette'
 import { DEFAULT_PARAMS, DEFAULT_RECIPE_STATE, normalizeParams, type RecipeState } from './params'
 import { createRecipe } from './recipes'
@@ -254,6 +255,18 @@ export function useAtelier() {
         ? { ...previous, subjectImages: [...previous.subjectImages, ...images] }
         : { ...previous, styleImages: [...previous.styleImages, ...images] }
     )
+  }
+
+  /** Fichiers déposés ou choisis : compressés, puis joints dans la limite par type. */
+  async function addReferenceFiles(kind: 'subject' | 'style', files: File[]) {
+    const current = kind === 'subject' ? recipe.subjectImages : recipe.styleImages
+    const accepted = files.filter((file) => file.type.startsWith('image/'))
+    try {
+      const images = await Promise.all(accepted.slice(0, MAX_REFERENCE_IMAGES - current.length).map(readImageFile))
+      addReferences(kind, images)
+    } catch (error) {
+      setNotice({ kind: 'error', message: error instanceof Error ? error.message : String(error) })
+    }
   }
 
   /* ── Génération ──────────────────────────────────────────────────────── */
@@ -580,6 +593,7 @@ export function useAtelier() {
     recipe,
     setRecipe,
     addReferences,
+    addReferenceFiles,
     items,
     pending,
     failures,

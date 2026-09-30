@@ -1,15 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import {
-  BookmarkSimpleIcon,
-  BroomIcon,
-  ClockCounterClockwiseIcon,
-  KeyIcon,
-  SparkleIcon,
-} from '@phosphor-icons/react/dist/ssr'
 import Composer from '@/components/atelier/Composer'
-import Drawer from '@/components/atelier/Drawer'
 import Strip from '@/components/atelier/Strip'
 import TopBar from '@/components/atelier/TopBar'
 import FailureInspector from '@/components/atelier/inspector/FailureInspector'
@@ -17,10 +9,12 @@ import ImageInspector from '@/components/atelier/inspector/ImageInspector'
 import MultiInspector from '@/components/atelier/inspector/MultiInspector'
 import PairInspector from '@/components/atelier/inspector/PairInspector'
 import SettingsInspector from '@/components/atelier/inspector/SettingsInspector'
-import HistoryDrawer from '@/components/atelier/drawers/HistoryDrawer'
-import RecipesDrawer from '@/components/atelier/drawers/RecipesDrawer'
-import SettingsDrawer from '@/components/atelier/drawers/SettingsDrawer'
-import CommandPalette, { type Command } from '@/components/atelier/overlays/CommandPalette'
+import { buildCommands } from '@/components/atelier/commands'
+import CommandPalette from '@/components/atelier/overlays/CommandPalette'
+import HistoryDialog from '@/components/atelier/overlays/HistoryDialog'
+import KeysDialog from '@/components/atelier/overlays/KeysDialog'
+import PresetsMenu from '@/components/atelier/overlays/PresetsMenu'
+import { ConfirmClearDialog, ShortcutsDialog } from '@/components/atelier/overlays/ShortcutsDialog'
 import Stage from '@/components/atelier/stage/Stage'
 import { useShortcuts } from '@/components/atelier/use-shortcuts'
 import { resolveSelection } from '@/lib/atelier/session-view'
@@ -60,6 +54,17 @@ function Workspace({ atelier }: { atelier: Atelier }) {
         onLang={() => atelier.setPrefs({ ...prefs, lang: prefs.lang === 'fr' ? 'en' : 'fr' })}
         sheetOpen={state.sheetOpen}
         onSheet={() => dispatch({ type: 'toggleSheet' })}
+        presetsMenu={
+          <PresetsMenu
+            recipes={atelier.recipes}
+            activeId={atelier.activeRecipeId}
+            onApply={atelier.applyRecipe}
+            onSave={atelier.saveCurrentRecipe}
+            onDelete={atelier.deleteRecipe}
+            onImport={atelier.setRecipes}
+            onClose={() => dispatch({ type: 'closeOverlay' })}
+          />
+        }
       />
 
       <div className="relative grid min-h-0 flex-1 grid-cols-[88px_minmax(0,1fr)_288px] gap-4 p-4 max-[1100px]:grid-cols-[88px_minmax(0,1fr)]">
@@ -69,7 +74,7 @@ function Workspace({ atelier }: { atelier: Atelier }) {
           pending={atelier.pending}
           selectedIds={state.selectedIds}
           onSelect={(id, additive) => dispatch({ type: 'select', id, additive })}
-          onNewSession={() => atelier.removeItems([...atelier.items, ...atelier.failures].map((entry) => entry.id))}
+          onNewSession={() => dispatch({ type: 'openOverlay', overlay: 'clear' })}
         />
 
         <main className="flex min-h-0 min-w-0 flex-col gap-4">
@@ -125,62 +130,47 @@ function Inspector({ atelier }: { atelier: Atelier }) {
   )
 }
 
-// ponytail: tiroirs et palette de l'ancienne interface, gardés tels quels
-// jusqu'au lot 6 qui les remplace par des dialogues.
 function Overlays({ atelier }: { atelier: Atelier }) {
   const t = useT()
   const { state, dispatch, prefs } = atelier
   const close = () => dispatch({ type: 'closeOverlay' })
 
-  const commands: Command[] = [
-    { id: 'generate', label: t.composer.generate, icon: SparkleIcon, run: () => void atelier.generate() },
-    { id: 'presets', label: t.top.presets, icon: BookmarkSimpleIcon, run: () => dispatch({ type: 'openOverlay', overlay: 'presets' }) },
-    { id: 'history', label: t.palette.history, icon: ClockCounterClockwiseIcon, run: () => dispatch({ type: 'openOverlay', overlay: 'history' }) },
-    { id: 'keys', label: t.palette.keysAndPrices, icon: KeyIcon, run: () => dispatch({ type: 'openOverlay', overlay: 'keys' }) },
-    {
-      id: 'new-session',
-      label: t.palette.newSession,
-      icon: BroomIcon,
-      run: () => atelier.removeItems([...atelier.items, ...atelier.failures].map((entry) => entry.id)),
-    },
-  ]
-
-  const drawer = (title: string, children: React.ReactNode) => (
-    <div className="fixed inset-y-4 right-4 z-40 flex">
-      <Drawer title={title} onClose={close}>
-        {children}
-      </Drawer>
-    </div>
-  )
-
   switch (state.overlay) {
     case 'palette':
-      return <CommandPalette commands={commands} onClose={close} />
+      return <CommandPalette commands={buildCommands(atelier, t)} onClose={close} />
     case 'history':
-      return drawer(
-        t.history.title,
-        <HistoryDrawer
+      return (
+        <HistoryDialog
           items={atelier.items}
-          selectedId={state.selectedIds[0] ?? null}
-          onSelect={(id) => dispatch({ type: 'select', id })}
-        />
-      )
-    case 'presets':
-      return drawer(
-        t.presets.title,
-        <RecipesDrawer
-          recipes={atelier.recipes}
-          activeRecipeId={atelier.activeRecipeId}
-          onApply={atelier.applyRecipe}
-          onSaveCurrent={atelier.saveCurrentRecipe}
-          onImport={atelier.setRecipes}
-          onDelete={atelier.deleteRecipe}
+          onClose={close}
+          onSelect={(id) => {
+            dispatch({ type: 'select', id })
+            close()
+          }}
         />
       )
     case 'keys':
-      return drawer(
-        t.keys.title,
-        <SettingsDrawer keys={atelier.keys} onKeyChange={atelier.setKey} prefs={prefs} onPrefsChange={atelier.setPrefs} />
+      return (
+        <KeysDialog
+          keys={atelier.keys}
+          onKeyChange={atelier.setKey}
+          prefs={prefs}
+          onPrefsChange={atelier.setPrefs}
+          onClose={close}
+        />
+      )
+    case 'shortcuts':
+      return <ShortcutsDialog onClose={close} />
+    case 'clear':
+      return (
+        <ConfirmClearDialog
+          count={atelier.items.length}
+          onClose={close}
+          onConfirm={() => {
+            atelier.clearSession()
+            close()
+          }}
+        />
       )
     default:
       return null

@@ -55,6 +55,7 @@ export function useShortcuts(atelier: Atelier, promptRef: React.RefObject<HTMLTe
       if (event.key === 'Escape') return dispatch({ type: 'escape' })
       if (mod || event.altKey || typing) return
 
+      if (event.key === '?') return act(() => dispatch({ type: 'toggleOverlay', overlay: 'shortcuts' }))
       if (event.key === '/') return act(() => promptRef.current?.focus())
       if (!inWorkspace(event.target)) return
 

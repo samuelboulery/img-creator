@@ -3,9 +3,8 @@
 import { useRef, useState } from 'react'
 import { MagicWandIcon, PlusIcon, ProhibitIcon, XIcon } from '@phosphor-icons/react/dist/ssr'
 import { Button, IconButton, Kbd } from './ui'
-import { MAX_REFERENCE_IMAGES } from '@/lib/adapters/validate'
 import { estimateCost } from '@/lib/atelier/cost'
-import { readImageFile, type ImageState } from '@/lib/atelier/image-file'
+import type { ImageState } from '@/lib/atelier/image-file'
 import { elapsedSeconds, useNow } from '@/lib/atelier/use-now'
 import type { Atelier, Notice } from '@/lib/atelier/use-atelier'
 import { useT } from '@/lib/i18n'
@@ -44,7 +43,6 @@ export default function Composer({ atelier, promptRef }: ComposerProps) {
   const { prompt, setPrompt, negative, setNegative, recipe, setRecipe, state, prefs, pending } = atelier
   const [avoidOpen, setAvoidOpen] = useState(negative.length > 0)
   const [refMenu, setRefMenu] = useState(false)
-  const [refError, setRefError] = useState<string | null>(null)
   const inputs = { subject: useRef<HTMLInputElement>(null), style: useRef<HTMLInputElement>(null) }
   const now = useNow(pending.length > 0)
 
@@ -54,19 +52,6 @@ export default function Composer({ atelier, promptRef }: ComposerProps) {
   const models = state.parallelId ? [state.adapterId, state.parallelId] : [state.adapterId]
   const count = atelier.params.batch * models.length
   const total = models.reduce((sum, id) => sum + estimateCost(id, atelier.params.batch, prefs.pricing), 0)
-
-  async function addFiles(kind: RefKind, files: FileList | null) {
-    if (!files || files.length === 0) return
-    const current = kind === 'subject' ? recipe.subjectImages : recipe.styleImages
-    const room = MAX_REFERENCE_IMAGES - current.length
-    try {
-      const images = await Promise.all(Array.from(files).slice(0, room).map(readImageFile))
-      atelier.addReferences(kind, images)
-      setRefError(null)
-    } catch (error) {
-      setRefError(error instanceof Error ? error.message : String(error))
-    }
-  }
 
   function removeRef(kind: RefKind, image: ImageState) {
     setRecipe(
@@ -188,7 +173,7 @@ export default function Composer({ atelier, promptRef }: ComposerProps) {
               multiple
               hidden
               onChange={(event) => {
-                void addFiles(kind, event.target.files)
+                void atelier.addReferenceFiles(kind, Array.from(event.target.files ?? []))
                 event.target.value = ''
               }}
             />
@@ -212,7 +197,7 @@ export default function Composer({ atelier, promptRef }: ComposerProps) {
         <StatusLine
           running={running}
           seconds={running > 0 ? elapsedSeconds(now, oldest) : 0}
-          notice={refError ? { kind: 'error', message: refError } : atelier.notice}
+          notice={atelier.notice}
           waitingKey={state.keyPrompt !== null}
           cost={models.length === 1 ? t.status.cost(count, prefs.pricing[state.adapterId], total) : `≈ ${t.eur(total)}`}
           onStop={atelier.stop}

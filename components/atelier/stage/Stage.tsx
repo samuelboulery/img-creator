@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { WarningCircleIcon } from '@phosphor-icons/react/dist/ssr'
 import KeyCard from './KeyCard'
 import { Button, Kbd, Shot } from '@/components/atelier/ui'
@@ -22,6 +23,7 @@ function frameStyle(ratio: AspectRatio, share = 1): React.CSSProperties {
 
 export default function Stage({ atelier }: { atelier: Atelier }) {
   const t = useT()
+  const [dragging, setDragging] = useState(false)
   const { state, dispatch, items, failures, pending } = atelier
   const selected = resolveSelection(state.selectedIds, items, failures)
   const focused = state.focusId ? resolveSelection([state.focusId], items, failures)[0] : undefined
@@ -54,15 +56,70 @@ export default function Stage({ atelier }: { atelier: Atelier }) {
     content = <Hello />
   }
 
+  const hasFiles = (event: React.DragEvent) => event.dataTransfer.types.includes('Files')
+
   return (
     <section
       aria-label={t.stage.label}
       tabIndex={0}
       data-stage
-      className="stage-dots flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-xs border border-hairline p-6 [container-type:size]"
+      onDragOver={(event) => {
+        if (!hasFiles(event)) return
+        event.preventDefault()
+        setDragging(true)
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false)
+      }}
+      onDrop={(event) => {
+        // Hors des deux moitiés, la référence est un sujet.
+        event.preventDefault()
+        setDragging(false)
+        void atelier.addReferenceFiles('subject', Array.from(event.dataTransfer.files))
+      }}
+      className="stage-dots relative flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-xs border border-hairline p-6 [container-type:size]"
     >
       {content}
+      {dragging && (
+        <DropZone
+          onDrop={(kind, files) => {
+            setDragging(false)
+            void atelier.addReferenceFiles(kind, files)
+          }}
+        />
+      )}
     </section>
+  )
+}
+
+/** Déposer une image sur la scène : à gauche le sujet, à droite le style. */
+function DropZone({ onDrop }: { onDrop: (kind: 'subject' | 'style', files: File[]) => void }) {
+  const t = useT()
+  const [over, setOver] = useState<'subject' | 'style' | null>(null)
+  return (
+    <div className="absolute inset-0 grid grid-cols-2 gap-3 bg-scrim p-3">
+      {(['subject', 'style'] as const).map((kind) => (
+        <div
+          key={kind}
+          onDragOver={(event) => {
+            event.preventDefault()
+            setOver(kind)
+          }}
+          onDragLeave={() => setOver(null)}
+          onDrop={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            onDrop(kind, Array.from(event.dataTransfer.files))
+          }}
+          className={`flex flex-col items-center justify-center gap-1 rounded-xs border border-dashed ${
+            over === kind ? 'border-ink bg-raised' : 'border-hairline-strong'
+          }`}
+        >
+          <span className="text-17 font-semibold">{kind === 'subject' ? t.refs.subject : t.refs.style}</span>
+          <span className="meta">{kind === 'subject' ? t.refs.dropSubject : t.refs.dropStyle}</span>
+        </div>
+      ))}
+    </div>
   )
 }
 

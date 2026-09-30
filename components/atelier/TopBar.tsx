@@ -11,6 +11,7 @@ import {
   SlidersHorizontalIcon,
   SunIcon,
 } from '@phosphor-icons/react/dist/ssr'
+import type { ReactNode } from 'react'
 import Mark from './Mark'
 import { Button, IconButton, Kbd } from './ui'
 import type { Overlay } from '@/lib/atelier/reducer'
@@ -26,10 +27,12 @@ interface TopBarProps {
   onLang: () => void
   sheetOpen: boolean
   onSheet: () => void
+  /** Le menu Presets, accroché sous son bouton. */
+  presetsMenu: ReactNode
 }
 
 /** Barre du niveau application : identité, puis ce qui ne dépend pas de l'image. */
-export default function TopBar({ overlay, onOverlay, theme, onTheme, lang, onLang, sheetOpen, onSheet }: TopBarProps) {
+export default function TopBar({ overlay, onOverlay, theme, onTheme, lang, onLang, sheetOpen, onSheet, presetsMenu }: TopBarProps) {
   const t = useT()
   // Sous 1100 px, les libellés passent en infobulle et « Réglages » ouvre la feuille.
   const label = 'max-[1100px]:sr-only'
@@ -58,10 +61,11 @@ export default function TopBar({ overlay, onOverlay, theme, onTheme, lang, onLan
         {t.top.settings}
       </Button>
 
+      <div className="relative">
       <Button
         icon={BookmarkSimpleIcon}
         active={overlay === 'presets'}
-        aria-haspopup="menu"
+        aria-haspopup="dialog"
         aria-expanded={overlay === 'presets'}
         aria-label={t.top.presets}
         onClick={() => onOverlay('presets')}
@@ -69,6 +73,8 @@ export default function TopBar({ overlay, onOverlay, theme, onTheme, lang, onLan
         <span className={label}>{t.top.presets}</span>
         <CaretDownIcon size={12} aria-hidden className="max-[1100px]:hidden" />
       </Button>
+      {overlay === 'presets' && presetsMenu}
+      </div>
       <Button
         icon={ClockCounterClockwiseIcon}
         active={overlay === 'history'}
