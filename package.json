@@ -51,7 +51,7 @@
   "dependencies": {
     "@google/genai": "^1.48.0",
     "@phosphor-icons/react": "^2.1.10",
-    "next": "16.2.11",
+    "next": "16.3.7",
     "openai": "^6.34.0",
     "react": "19.2.4",
     "react-dom": "19.2.4"
@@ -66,7 +66,7 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.5",
     "eslint": "^9",
-    "eslint-config-next": "16.2.2",
+    "eslint-config-next": "16.3.7",
     "jsdom": "^30.0.1",
     "tailwindcss": "^4",
     "typescript": "^5.9.3",
