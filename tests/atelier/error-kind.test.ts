@@ -1,36 +1,22 @@
 import { describe, expect, test } from 'vitest'
-import { atelierReducer, initialAtelierState } from '@/lib/atelier/reducer'
+import { classifyClientError } from '@/lib/atelier/error-kind'
+import { toClientMessage } from '@/lib/adapters/errors'
 
-describe('reducer — nature de l’erreur', () => {
-  test('une erreur de clé retient son genre', () => {
-    const state = atelierReducer(initialAtelierState, {
-      type: 'setError',
-      error: 'Clé API invalide ou manquante',
-      kind: 'missing-key',
-    })
-
-    expect(state.error).toBe('Clé API invalide ou manquante')
-    expect(state.errorKind).toBe('missing-key')
+describe('nature d’un échec, vue du client', () => {
+  // Le client ne voit que le message expurgé par la route : chaque message
+  // qu'elle peut renvoyer doit retrouver sa nature, sans quoi la scène propose
+  // « Relancer » là où il faudrait une clé.
+  test.each([
+    ['invalid api key', 'missing-key'],
+    ['429 Too Many Requests', 'quota'],
+    ['blocked by safety system', 'safety'],
+    ['No image returned from gpt-image-2', 'no-image'],
+    ['ECONNRESET', 'generic'],
+  ] as const)('« %s » → %s', (amont, attendu) => {
+    expect(classifyClientError(toClientMessage(amont))).toBe(attendu)
   })
 
-  test('sans genre précisé, une erreur est générique', () => {
-    const state = atelierReducer(initialAtelierState, {
-      type: 'setError',
-      error: 'boom',
-    })
-
-    expect(state.errorKind).toBe('generic')
-  })
-
-  test('effacer l’erreur efface son genre — pas de bandeau fantôme', () => {
-    const avec = atelierReducer(initialAtelierState, {
-      type: 'setError',
-      error: 'Clé API invalide ou manquante',
-      kind: 'missing-key',
-    })
-    const sans = atelierReducer(avec, { type: 'setError', error: null })
-
-    expect(sans.error).toBeNull()
-    expect(sans.errorKind).toBeNull()
+  test('un message inconnu est générique', () => {
+    expect(classifyClientError('boom')).toBe('generic')
   })
 })

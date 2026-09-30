@@ -1,417 +1,192 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
+import { useEffect, useRef } from 'react'
 import {
-  Books,
-  Broom,
-  ClockCounterClockwise,
-  FileArrowDown,
-  GitBranch,
-  GridFour,
-  Images,
-  SlidersHorizontal,
-  Sparkle,
-  SquareSplitHorizontal,
-  Swap,
-  WarningCircle,
+  BookmarkSimpleIcon,
+  BroomIcon,
+  ClockCounterClockwiseIcon,
+  KeyIcon,
+  SparkleIcon,
 } from '@phosphor-icons/react/dist/ssr'
-import CanvasHeader from '@/components/atelier/CanvasHeader'
 import Composer from '@/components/atelier/Composer'
 import Drawer from '@/components/atelier/Drawer'
-import ErrorBanner from '@/components/atelier/ErrorBanner'
-import Rail from '@/components/atelier/Rail'
-import RecipesDrawer from '@/components/atelier/drawers/RecipesDrawer'
-import EnrichDrawer from '@/components/atelier/drawers/EnrichDrawer'
-import HistoryDrawer from '@/components/atelier/drawers/HistoryDrawer'
-import SettingsDrawer from '@/components/atelier/drawers/SettingsDrawer'
-import Compare from '@/components/atelier/modes/Compare'
-import Explore from '@/components/atelier/modes/Explore'
-import Iterate from '@/components/atelier/modes/Iterate'
-import Produce from '@/components/atelier/modes/Produce'
-import CommandPalette, { type Command } from '@/components/atelier/overlays/CommandPalette'
-import Onboarding from '@/components/atelier/overlays/Onboarding'
-import Viewer from '@/components/atelier/overlays/Viewer'
+import Strip from '@/components/atelier/Strip'
+import TopBar from '@/components/atelier/TopBar'
+import { InspectorHeader } from '@/components/atelier/inspector/ImageInspector'
+import FailureInspector from '@/components/atelier/inspector/FailureInspector'
+import ImageInspector from '@/components/atelier/inspector/ImageInspector'
 import SettingsInspector from '@/components/atelier/inspector/SettingsInspector'
-import { ADAPTERS } from '@/lib/adapters/capabilities'
-import { downloadImage, downloadJson, exportSheet } from '@/lib/atelier/export'
-import { createRecipe, serializeRecipes } from '@/lib/atelier/recipes'
-import { seedSession } from '@/lib/atelier/seed'
-import { toReferenceImage } from '@/lib/atelier/image-file'
-import { isPanelVisible } from '@/lib/atelier/reducer'
-import { useAtelier } from '@/lib/atelier/use-atelier'
-import { I18nProvider } from '@/lib/i18n'
-import type { AdapterId, DrawerId } from '@/lib/types'
-
-const DRAWER_TITLES: Record<DrawerId, string> = {
-  history: 'Historique',
-  recipes: 'Bibliothèque de recettes',
-  enrich: 'Enrichissement du prompt',
-  settings: 'Clés & préférences',
-}
-
-// ponytail: cycle provisoire du bouton de l'en-tête, remplacé par le menu Modèle au lot 4.
-function nextAdapter(current: AdapterId): AdapterId {
-  return ADAPTERS[(ADAPTERS.indexOf(current) + 1) % ADAPTERS.length]
-}
+import HistoryDrawer from '@/components/atelier/drawers/HistoryDrawer'
+import RecipesDrawer from '@/components/atelier/drawers/RecipesDrawer'
+import SettingsDrawer from '@/components/atelier/drawers/SettingsDrawer'
+import CommandPalette, { type Command } from '@/components/atelier/overlays/CommandPalette'
+import Stage from '@/components/atelier/stage/Stage'
+import { useShortcuts } from '@/components/atelier/use-shortcuts'
+import { Button } from '@/components/atelier/ui'
+import { resolveSelection } from '@/lib/atelier/session-view'
+import { useAtelier, type Atelier } from '@/lib/atelier/use-atelier'
+import { I18nProvider, useT } from '@/lib/i18n'
 
 export default function Home() {
   const atelier = useAtelier()
-  const { state, dispatch, items, prefs } = atelier
+  const { prefs } = atelier
 
-  // Thème et langue suivent les préférences ; le script de layout.tsx a déjà
-  // posé la bonne valeur avant la première peinture.
+  // Le script de layout.tsx a posé thème et langue avant la première peinture.
   useEffect(() => {
     document.documentElement.dataset.theme = prefs.theme
     document.documentElement.lang = prefs.lang
   }, [prefs.theme, prefs.lang])
 
-  // ⌘K ouvre la palette, Échap referme ce qui est au-dessus.
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey)) {
-        event.preventDefault()
-        dispatch({ type: 'toggleCmd' })
-      }
-      if (event.key === 'Escape') dispatch({ type: 'closeOverlays' })
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [dispatch])
-
-  const commands: Command[] = useMemo(
-    () => [
-      {
-        id: 'generate',
-        label: 'Générer maintenant',
-        shortcut: '⏎',
-        icon: Sparkle,
-        run: () => void atelier.generate(atelier.prompt),
-      },
-      {
-        id: 'swap-model',
-        label: 'Changer de modèle',
-        shortcut: 'M',
-        icon: Swap,
-        run: () => atelier.selectModel(nextAdapter(state.adapterId)),
-      },
-      {
-        id: 'compare',
-        label: 'Comparer les deux modèles',
-        shortcut: 'A/B',
-        icon: SquareSplitHorizontal,
-        run: () => dispatch({ type: 'setMode', mode: 'ab' }),
-      },
-      {
-        id: 'iterate',
-        label: 'Passer en mode Itérer',
-        icon: GitBranch,
-        run: () => dispatch({ type: 'setMode', mode: 'iterate' }),
-      },
-      {
-        id: 'produce',
-        label: 'Passer en mode Produire',
-        icon: GridFour,
-        run: () => dispatch({ type: 'setMode', mode: 'produce' }),
-      },
-      {
-        id: 'library',
-        label: 'Ouvrir la bibliothèque',
-        icon: Books,
-        run: () => dispatch({ type: 'toggleDrawer', drawer: 'recipes' }),
-      },
-      {
-        id: 'history',
-        label: "Ouvrir l'historique",
-        icon: ClockCounterClockwise,
-        run: () => dispatch({ type: 'toggleDrawer', drawer: 'history' }),
-      },
-      {
-        id: 'settings',
-        label: 'Clés & préférences',
-        icon: SlidersHorizontal,
-        run: () => dispatch({ type: 'toggleDrawer', drawer: 'settings' }),
-      },
-      {
-        id: 'export-recipe',
-        label: 'Exporter la recette en .json',
-        icon: FileArrowDown,
-        run: () =>
-          downloadJson(
-            serializeRecipes([
-              createRecipe({
-                id: crypto.randomUUID(),
-                name: atelier.activeRecipe?.name ?? 'recette courante',
-                subjectImages: atelier.recipe.subjectImages.map(toReferenceImage),
-                subjectWeight: atelier.recipe.subjectWeight,
-                styleImages: atelier.recipe.styleImages.map(toReferenceImage),
-                styleWeight: atelier.recipe.styleWeight,
-                identityLock: atelier.recipe.identityLock,
-                paletteTransfer: atelier.recipe.paletteTransfer,
-                promptSuffix: atelier.promptSuffix,
-                negative: atelier.negative,
-                params: atelier.params,
-              }),
-            ]),
-            'recette.json'
-          ),
-      },
-      {
-        id: 'clear',
-        label: 'Vider la session',
-        icon: Broom,
-        run: () => {
-          atelier.setItems([])
-          dispatch({ type: 'select', id: null })
-          dispatch({ type: 'selectSheet', ids: [] })
-        },
-      },
-      {
-        id: 'seed-session',
-        label: '(dev) Charger 24 images de démo',
-        icon: Images,
-        run: () => {
-          void seedSession().then((seeded) => {
-            atelier.setItems(seeded)
-            dispatch({ type: 'select', id: seeded[0]?.id ?? null })
-          })
-        },
-      },
-      {
-        id: 'simulate-error',
-        label: "(dev) Simuler un échec d'API",
-        icon: WarningCircle,
-        run: () =>
-          dispatch({
-            type: 'setError',
-            error:
-              'gpt-image-2 a renvoyé 429 — quota de ta clé OpenAI atteint. Les réglages sont conservés.',
-          }),
-      },
-    ],
-    [atelier, dispatch, state.adapterId]
-  )
-
-  const needsOnboarding = atelier.onboarding
-
-  // Le plafond de stockage se dit à voix haute : sans ça, l'utilisateur croit
-  // que toute la session revient après un rechargement.
-  const { kept, fullCount } = atelier.persisted
-  const storageLabel =
-    kept < items.length
-      ? `${kept} gardée${kept > 1 ? 's' : ''} · ${fullCount} en pleine déf`
-      : fullCount < kept
-        ? `${fullCount}/${kept} en pleine déf`
-        : 'session locale'
-
-  const counterLabel =
-    items.length > 0
-      ? `${items.length} variante${items.length > 1 ? 's' : ''} · ${storageLabel}`
-      : 'session locale'
-
   return (
     <I18nProvider lang={prefs.lang}>
-    <div className="relative h-screen w-screen overflow-hidden">
-
-      <div className="relative flex h-full gap-[10px] p-[10px]">
-        <Rail
-          openDrawer={state.openDrawer}
-          usagePercent={0}
-          usageEur={items.reduce((total, item) => total + item.costEur, 0)}
-          onToggleDrawer={(drawer) => dispatch({ type: 'toggleDrawer', drawer })}
-        />
-
-        {state.openDrawer && (
-          <Drawer
-            title={DRAWER_TITLES[state.openDrawer]}
-            onClose={() => dispatch({ type: 'closeDrawer' })}
-          >
-            {state.openDrawer === 'settings' ? (
-              <SettingsDrawer
-                keys={atelier.keys}
-                onKeyChange={atelier.setKey}
-                prefs={prefs}
-                onPrefsChange={atelier.setPrefs}
-                onReviewOnboarding={atelier.reviewOnboarding}
-              />
-            ) : state.openDrawer === 'recipes' ? (
-              <RecipesDrawer
-                recipes={atelier.recipes}
-                activeRecipeId={atelier.activeRecipeId}
-                onApply={atelier.applyRecipe}
-                onSaveCurrent={atelier.saveCurrentRecipe}
-                onImport={atelier.setRecipes}
-                onDelete={(id) =>
-                  atelier.setRecipes(atelier.recipes.filter((entry) => entry.id !== id))
-                }
-              />
-            ) : state.openDrawer === 'history' ? (
-              <HistoryDrawer
-                items={items}
-                selectedId={state.selectedId}
-                onSelect={(id) => dispatch({ type: 'select', id })}
-              />
-            ) : (
-              <EnrichDrawer
-                apiKey={atelier.keys.text}
-                onKeyChange={(value) => atelier.setKey('text', value)}
-                prePrompt={prefs.enrichPrePrompt}
-                onPrePromptChange={(value) =>
-                  atelier.setPrefs({ ...prefs, enrichPrePrompt: value })
-                }
-                prompt={atelier.prompt}
-                onUseEnriched={(value) => atelier.setPrompt(value)}
-              />
-            )}
-          </Drawer>
-        )}
-
-        <main className="flex min-w-canvas-min flex-1 flex-col gap-[13px] overflow-hidden rounded-panel border border-line bg-canvas/62 p-[10px] backdrop-blur-[28px]">
-          <CanvasHeader
-            sessionTitle="Session"
-            counterLabel={counterLabel}
-            mode={state.mode}
-            adapterId={state.adapterId}
-            onModeChange={(mode) => dispatch({ type: 'setMode', mode })}
-            onToggleAdapter={() => atelier.selectModel(nextAdapter(state.adapterId))}
-            onOpenCommandPalette={() => dispatch({ type: 'toggleCmd' })}
-            onTogglePanel={() => dispatch({ type: 'togglePanel' })}
-            panelOpen={state.panelOpen}
-          />
-
-          <div className="min-h-0 flex-1">
-            {state.mode === 'explore' ? (
-              <Explore
-                items={items}
-                pending={atelier.pending}
-                selectedId={state.selectedId}
-                onSelect={(id) => dispatch({ type: 'select', id })}
-                onEnlarge={() => dispatch({ type: 'openViewer' })}
-                onDecline={(item) =>
-                  void atelier.generate(item.prompt, { parentId: item.id })
-                }
-              />
-            ) : state.mode === 'iterate' ? (
-              <Iterate
-                items={items}
-                selectedId={state.selectedId}
-                onSelect={(id) => dispatch({ type: 'select', id })}
-              />
-            ) : state.mode === 'produce' ? (
-              <Produce
-                items={items}
-                selection={state.sheetSelection}
-                onToggle={(id) => dispatch({ type: 'toggleSheet', id })}
-                onSelectAll={() =>
-                  dispatch({
-                    type: 'selectSheet',
-                    ids: items.slice(0, 8).map((item) => item.id),
-                  })
-                }
-                onExport={() =>
-                  exportSheet(items.filter((item) => state.sheetSelection.includes(item.id)))
-                }
-              />
-            ) : (
-              <Compare
-                ab={atelier.ab}
-                onKeep={(item) => {
-                  dispatch({ type: 'setAdapter', adapterId: item.adapterId })
-                  dispatch({ type: 'select', id: item.id })
-                  dispatch({ type: 'setMode', mode: 'explore' })
-                }}
-                onDecline={(item) =>
-                  void atelier.generate(item.prompt, {
-                    parentId: item.id,
-                    adapterId: item.adapterId,
-                  })
-                }
-                onRerun={() => void atelier.compare(atelier.prompt)}
-                onExit={() => dispatch({ type: 'setMode', mode: 'explore' })}
-              />
-            )}
-          </div>
-
-          {state.error && (
-            <ErrorBanner
-              message={state.error}
-              kind={state.errorKind}
-              onRetry={() => void atelier.generate(atelier.prompt)}
-              onOpenSettings={() => {
-                dispatch({ type: 'setError', error: null })
-                dispatch({ type: 'toggleDrawer', drawer: 'settings' })
-              }}
-              onDismiss={() => dispatch({ type: 'setError', error: null })}
-            />
-          )}
-
-          <Composer
-            prompt={atelier.prompt}
-            negative={atelier.negative}
-            onPromptChange={atelier.setPrompt}
-            onNegativeChange={atelier.setNegative}
-            presetName={atelier.activeRecipe?.name ?? null}
-            aspectRatio={atelier.params.aspectRatio}
-            batch={atelier.params.batch}
-            estimatedCost={atelier.estimatedCost}
-            hasEnrichKey={atelier.keys.text.trim().length > 0}
-            onEnrich={() => dispatch({ type: 'toggleDrawer', drawer: 'enrich' })}
-            onSubmit={() =>
-              state.mode === 'ab'
-                ? void atelier.compare(atelier.prompt)
-                : void atelier.generate(atelier.prompt)
-            }
-          />
-        </main>
-
-        {isPanelVisible(state) && (
-          <aside
-            aria-label="Réglages"
-            className={`w-[288px] shrink-0 flex-col overflow-hidden rounded-xs border border-hairline bg-solid ${
-              state.panelOpen
-                ? 'flex max-[1100px]:absolute max-[1100px]:inset-y-[10px] max-[1100px]:right-[10px] max-[1100px]:z-30'
-                : 'flex max-[1100px]:hidden'
-            }`}
-          >
-            <SettingsInspector
-              atelier={atelier}
-              onOpenKeys={() => dispatch({ type: 'toggleDrawer', drawer: 'settings' })}
-            />
-          </aside>
-        )}
-        {state.cmdOpen && (
-          <CommandPalette
-            commands={commands}
-            onClose={() => dispatch({ type: 'closeOverlays' })}
-          />
-        )}
-
-        {needsOnboarding && (
-          <Onboarding
-            keys={atelier.keys}
-            onKeyChange={atelier.setKey}
-            onEnter={atelier.finishOnboarding}
-          />
-        )}
-
-        {state.viewerOpen && (
-          <Viewer
-            items={items}
-            selectedId={state.selectedId}
-            recipeName={atelier.activeRecipe?.name ?? null}
-            onSelect={(id) => dispatch({ type: 'select', id })}
-            onClose={() => dispatch({ type: 'closeViewer' })}
-            onReusePrompt={(item) => {
-              atelier.setPrompt(item.prompt)
-              atelier.setNegative(item.negative)
-              dispatch({ type: 'closeViewer' })
-            }}
-            onDecline={(item) => void atelier.generate(item.prompt, { parentId: item.id })}
-            onDownload={downloadImage}
-          />
-        )}
-      </div>
-    </div>
+      <Workspace atelier={atelier} />
     </I18nProvider>
   )
+}
+
+function Workspace({ atelier }: { atelier: Atelier }) {
+  const { state, dispatch, prefs } = atelier
+  const promptRef = useRef<HTMLTextAreaElement>(null)
+  useShortcuts(atelier, promptRef)
+
+  return (
+    <div className="flex h-dvh flex-col overflow-hidden">
+      <TopBar
+        overlay={state.overlay}
+        onOverlay={(overlay) => dispatch({ type: 'toggleOverlay', overlay })}
+        theme={prefs.theme}
+        onTheme={() => atelier.setPrefs({ ...prefs, theme: prefs.theme === 'dark' ? 'light' : 'dark' })}
+        lang={prefs.lang}
+        onLang={() => atelier.setPrefs({ ...prefs, lang: prefs.lang === 'fr' ? 'en' : 'fr' })}
+        sheetOpen={state.sheetOpen}
+        onSheet={() => dispatch({ type: 'toggleSheet' })}
+      />
+
+      <div className="relative grid min-h-0 flex-1 grid-cols-[88px_minmax(0,1fr)_288px] gap-4 p-4 max-[1100px]:grid-cols-[88px_minmax(0,1fr)]">
+        <Strip
+          items={atelier.items}
+          failures={atelier.failures}
+          pending={atelier.pending}
+          selectedIds={state.selectedIds}
+          onSelect={(id, additive) => dispatch({ type: 'select', id, additive })}
+          onNewSession={() => atelier.removeItems([...atelier.items, ...atelier.failures].map((entry) => entry.id))}
+        />
+
+        <main className="flex min-h-0 min-w-0 flex-col gap-4">
+          <Stage atelier={atelier} />
+          <Composer atelier={atelier} promptRef={promptRef} />
+        </main>
+
+        <Inspector atelier={atelier} />
+      </div>
+
+      <Overlays atelier={atelier} />
+    </div>
+  )
+}
+
+function Inspector({ atelier }: { atelier: Atelier }) {
+  const t = useT()
+  const { state, dispatch } = atelier
+  const selected = resolveSelection(state.selectedIds, atelier.items, atelier.failures)
+
+  let body: React.ReactNode
+  if (selected.length === 0) {
+    body = <SettingsInspector atelier={atelier} onOpenKeys={() => dispatch({ type: 'openOverlay', overlay: 'keys' })} />
+  } else if (selected.length === 1) {
+    const [entry] = selected
+    body =
+      entry.kind === 'item' ? (
+        <ImageInspector item={entry.item} atelier={atelier} />
+      ) : (
+        <FailureInspector failure={entry.failure} atelier={atelier} />
+      )
+  } else {
+    // ponytail: fiche multiple minimale — l'export et la comparaison arrivent au lot 5.
+    body = (
+      <>
+        <InspectorHeader onBack={() => dispatch({ type: 'clearSelection' })} meta={t.multi.title(selected.length)} />
+        <div className="p-2">
+          <Button full variant="danger" onClick={() => atelier.removeItems(selected.map((entry) => entry.id))}>
+            {t.multi.delete(selected.length)}
+          </Button>
+        </div>
+      </>
+    )
+  }
+
+  return (
+    <aside
+      aria-label={t.stage.inspector}
+      className={`flex min-h-0 flex-col overflow-hidden rounded-xs border border-hairline bg-solid ${
+        state.sheetOpen
+          ? 'max-[1100px]:absolute max-[1100px]:inset-y-4 max-[1100px]:right-4 max-[1100px]:z-30 max-[1100px]:w-[288px]'
+          : 'max-[1100px]:hidden'
+      }`}
+    >
+      {body}
+    </aside>
+  )
+}
+
+// ponytail: tiroirs et palette de l'ancienne interface, gardés tels quels
+// jusqu'au lot 6 qui les remplace par des dialogues.
+function Overlays({ atelier }: { atelier: Atelier }) {
+  const t = useT()
+  const { state, dispatch, prefs } = atelier
+  const close = () => dispatch({ type: 'closeOverlay' })
+
+  const commands: Command[] = [
+    { id: 'generate', label: t.composer.generate, icon: SparkleIcon, run: () => void atelier.generate() },
+    { id: 'presets', label: t.top.presets, icon: BookmarkSimpleIcon, run: () => dispatch({ type: 'openOverlay', overlay: 'presets' }) },
+    { id: 'history', label: t.palette.history, icon: ClockCounterClockwiseIcon, run: () => dispatch({ type: 'openOverlay', overlay: 'history' }) },
+    { id: 'keys', label: t.palette.keysAndPrices, icon: KeyIcon, run: () => dispatch({ type: 'openOverlay', overlay: 'keys' }) },
+    {
+      id: 'new-session',
+      label: t.palette.newSession,
+      icon: BroomIcon,
+      run: () => atelier.removeItems([...atelier.items, ...atelier.failures].map((entry) => entry.id)),
+    },
+  ]
+
+  const drawer = (title: string, children: React.ReactNode) => (
+    <div className="fixed inset-y-4 right-4 z-40 flex">
+      <Drawer title={title} onClose={close}>
+        {children}
+      </Drawer>
+    </div>
+  )
+
+  switch (state.overlay) {
+    case 'palette':
+      return <CommandPalette commands={commands} onClose={close} />
+    case 'history':
+      return drawer(
+        t.history.title,
+        <HistoryDrawer
+          items={atelier.items}
+          selectedId={state.selectedIds[0] ?? null}
+          onSelect={(id) => dispatch({ type: 'select', id })}
+        />
+      )
+    case 'presets':
+      return drawer(
+        t.presets.title,
+        <RecipesDrawer
+          recipes={atelier.recipes}
+          activeRecipeId={atelier.activeRecipeId}
+          onApply={atelier.applyRecipe}
+          onSaveCurrent={atelier.saveCurrentRecipe}
+          onImport={atelier.setRecipes}
+          onDelete={atelier.deleteRecipe}
+        />
+      )
+    case 'keys':
+      return drawer(
+        t.keys.title,
+        <SettingsDrawer keys={atelier.keys} onKeyChange={atelier.setKey} prefs={prefs} onPrefsChange={atelier.setPrefs} />
+      )
+    default:
+      return null
+  }
 }

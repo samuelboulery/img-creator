@@ -41,18 +41,21 @@ describe('classification des erreurs amont', () => {
   })
 })
 
-describe("classification côté client (choix de l'action du bandeau)", () => {
+describe("classification côté client (choix du remède sur la scène)", () => {
   test('le message expurgé du serveur mène aux réglages', () => {
     expect(classifyClientError('Clé API invalide ou manquante')).toBe('missing-key')
   })
 
-  test('les messages propres au mode A/B sont reconnus', () => {
+  test('les messages « aucune clé enregistrée » sont reconnus', () => {
     expect(classifyClientError('Aucune clé Google AI Studio enregistrée')).toBe('missing-key')
     expect(classifyClientError('Aucune clé OpenAI enregistrée')).toBe('missing-key')
   })
 
   test('une panne réseau reste « réessayable »', () => {
     expect(classifyClientError('Erreur lors de la génération')).toBe('generic')
-    expect(classifyClientError('Quota API dépassé')).toBe('generic')
+  })
+
+  test('un quota atteint se distingue : on patiente ou on change de modèle', () => {
+    expect(classifyClientError('Quota API dépassé')).toBe('quota')
   })
 })

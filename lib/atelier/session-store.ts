@@ -24,13 +24,13 @@ export function hasFullImage(item: GalleryItem): boolean {
 }
 
 /** Source d'affichage grand format : pleine résolution, sinon l'aperçu. */
-export function imageSrc(item: GalleryItem): string {
+export function imageSrc(item: GalleryItem): string | undefined {
   if (hasFullImage(item)) return `data:${item.result.mimeType};base64,${item.result.imageBase64}`
-  return item.thumb ?? ''
+  return item.thumb ?? undefined
 }
 
 /** Source d'affichage en liste : l'aperçu d'abord, pour ne pas décoder le plein format. */
-export function thumbSrc(item: GalleryItem): string {
+export function thumbSrc(item: GalleryItem): string | undefined {
   return item.thumb ?? imageSrc(item)
 }
 

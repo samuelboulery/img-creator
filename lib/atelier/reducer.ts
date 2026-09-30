@@ -1,72 +1,63 @@
-import type { AdapterId, DrawerId, Mode } from '@/lib/types'
+import type { AdapterId } from '@/lib/types'
+
+/** Ce qui s'ouvre au-dessus de l'espace de travail — une seule chose à la fois. */
+export type Overlay = 'history' | 'presets' | 'keys' | 'palette' | 'shortcuts' | 'clear'
 
 /**
- * Ce que l'utilisateur peut faire de l'erreur. `missing-key` est le seul cas où
- * réessayer est inutile tant que rien n'a changé.
- */
-export type ErrorKind = 'missing-key' | 'generic' | null
-
-/**
- * État d'interface de l'atelier. Aucune donnée serveur : ce qui doit survivre
- * au rechargement est persisté séparément dans localStorage.
+ * État d'interface d'Obskura. Aucune donnée serveur : ce qui doit survivre au
+ * rechargement est persisté séparément dans localStorage.
+ *
+ * Il n'y a plus de mode : l'inspecteur et la scène se déduisent de la
+ * sélection. Rien de sélectionné ⇒ réglages ; une image ⇒ sa fiche ; deux ⇒
+ * la comparaison ; davantage ⇒ l'export.
  */
 export interface AtelierState {
-  mode: Mode
   adapterId: AdapterId
   /** Second modèle lancé à chaque Générer, ou null. */
   parallelId: AdapterId | null
-  selectedId: string | null
-  openDrawer: DrawerId | null
-  viewerOpen: boolean
-  cmdOpen: boolean
-  error: string | null
-  /**
-   * Nature de l'erreur courante : elle décide de l'action proposée par le
-   * bandeau. Une clé manquante appelle « Ouvrir les réglages », pas « Réessayer »
-   * — réessayer à l'identique ne peut que réechouer.
-   */
-  errorKind: ErrorKind
-  /** Cases cochées de la planche contact (mode Produire). */
-  sheetSelection: string[]
-  /** Sous ~1100 px, le panneau de paramètres se déplie à la demande. */
-  panelOpen: boolean
+  /** Ce que l'inspecteur montre, dans l'ordre des clics. */
+  selectedIds: string[]
+  /** Ce que la scène montre quand rien n'est sélectionné. */
+  focusId: string | null
+  overlay: Overlay | null
+  /** Sous 1100 px, l'inspecteur devient une feuille ouverte à la demande. */
+  sheetOpen: boolean
+  /** Générer sans clé : la scène demande celle de ce modèle. */
+  keyPrompt: AdapterId | null
 }
 
 export const initialAtelierState: AtelierState = {
-  mode: 'explore',
   adapterId: 'nano-banana-2',
   parallelId: null,
-  selectedId: null,
-  openDrawer: null,
-  viewerOpen: false,
-  cmdOpen: false,
-  error: null,
-  errorKind: null,
-  sheetSelection: [],
-  panelOpen: false,
+  selectedIds: [],
+  focusId: null,
+  overlay: null,
+  sheetOpen: false,
+  keyPrompt: null,
 }
 
 export type AtelierAction =
-  | { type: 'setMode'; mode: Mode }
   | { type: 'setAdapter'; adapterId: AdapterId }
   | { type: 'setParallel'; adapterId: AdapterId | null }
-  | { type: 'select'; id: string | null }
-  | { type: 'toggleDrawer'; drawer: DrawerId }
-  | { type: 'closeDrawer' }
-  | { type: 'openViewer' }
-  | { type: 'closeViewer' }
-  | { type: 'toggleCmd' }
-  | { type: 'closeOverlays' }
-  | { type: 'setError'; error: string | null; kind?: ErrorKind }
-  | { type: 'toggleSheet'; id: string }
-  | { type: 'selectSheet'; ids: string[] }
-  | { type: 'togglePanel' }
+  | { type: 'select'; id: string; additive?: boolean }
+  | { type: 'selectMany'; ids: string[] }
+  | { type: 'clearSelection' }
+  | { type: 'runStarted' }
+  | { type: 'arrived'; ids: string[]; pair?: boolean }
+  | { type: 'forget'; ids: string[] }
+  | { type: 'openOverlay'; overlay: Overlay }
+  | { type: 'toggleOverlay'; overlay: Overlay }
+  | { type: 'closeOverlay' }
+  | { type: 'escape' }
+  | { type: 'toggleSheet' }
+  | { type: 'askKey'; adapterId: AdapterId | null }
+
+function clearSelection(state: AtelierState): AtelierState {
+  return { ...state, selectedIds: [], focusId: state.selectedIds[0] ?? state.focusId }
+}
 
 export function atelierReducer(state: AtelierState, action: AtelierAction): AtelierState {
   switch (action.type) {
-    case 'setMode':
-      return { ...state, mode: action.mode }
-
     // Le modèle parallèle promu en principal cesse d'être parallèle.
     case 'setAdapter':
       return {
@@ -81,56 +72,60 @@ export function atelierReducer(state: AtelierState, action: AtelierAction): Atel
         parallelId: action.adapterId === state.adapterId ? null : action.adapterId,
       }
 
-    case 'select':
-      return { ...state, selectedId: action.id }
+    case 'select': {
+      if (!action.additive) return { ...state, selectedIds: [action.id], focusId: action.id }
+      const selectedIds = state.selectedIds.includes(action.id)
+        ? state.selectedIds.filter((id) => id !== action.id)
+        : [...state.selectedIds, action.id]
+      return { ...state, selectedIds, focusId: selectedIds[0] ?? state.focusId }
+    }
 
-    // Un bouton de rail déjà actif referme son tiroir.
-    case 'toggleDrawer':
-      return {
-        ...state,
-        openDrawer: state.openDrawer === action.drawer ? null : action.drawer,
+    case 'selectMany':
+      return { ...state, selectedIds: action.ids, focusId: action.ids[0] ?? state.focusId }
+
+    case 'clearSelection':
+      return clearSelection(state)
+
+    case 'runStarted':
+      return { ...state, selectedIds: [], focusId: null, keyPrompt: null }
+
+    // Une sélection faite pendant l'attente l'emporte sur l'image qui arrive.
+    case 'arrived': {
+      if (state.selectedIds.length > 0 || action.ids.length === 0) return state
+      if (action.pair && action.ids.length === 2) {
+        return { ...state, selectedIds: action.ids, focusId: action.ids[0] }
       }
+      return { ...state, focusId: action.ids[0] }
+    }
 
-    case 'closeDrawer':
-      return { ...state, openDrawer: null }
+    case 'forget': {
+      const gone = new Set(action.ids)
+      const selectedIds = state.selectedIds.filter((id) => !gone.has(id))
+      const focusId =
+        state.focusId && gone.has(state.focusId) ? (selectedIds[0] ?? null) : state.focusId
+      return { ...state, selectedIds, focusId }
+    }
 
-    case 'openViewer':
-      return { ...state, viewerOpen: true }
+    case 'openOverlay':
+      return { ...state, overlay: action.overlay }
 
-    case 'closeViewer':
-      return { ...state, viewerOpen: false }
+    case 'toggleOverlay':
+      return { ...state, overlay: state.overlay === action.overlay ? null : action.overlay }
 
-    case 'toggleCmd':
-      return { ...state, cmdOpen: !state.cmdOpen }
+    case 'closeOverlay':
+      return { ...state, overlay: null }
 
-    // Échap : ferme d'abord ce qui est au-dessus, sans toucher aux réglages.
-    case 'closeOverlays':
-      return { ...state, viewerOpen: false, cmdOpen: false }
-
-    case 'setError':
-      return {
-        ...state,
-        error: action.error,
-        errorKind: action.error ? (action.kind ?? 'generic') : null,
-      }
+    // Échap défait une couche à la fois, jamais une génération.
+    case 'escape':
+      if (state.overlay) return { ...state, overlay: null }
+      if (state.keyPrompt) return { ...state, keyPrompt: null }
+      if (state.sheetOpen) return { ...state, sheetOpen: false }
+      return clearSelection(state)
 
     case 'toggleSheet':
-      return {
-        ...state,
-        sheetSelection: state.sheetSelection.includes(action.id)
-          ? state.sheetSelection.filter((id) => id !== action.id)
-          : [...state.sheetSelection, action.id],
-      }
+      return { ...state, sheetOpen: !state.sheetOpen }
 
-    case 'selectSheet':
-      return { ...state, sheetSelection: action.ids }
-
-    case 'togglePanel':
-      return { ...state, panelOpen: !state.panelOpen }
+    case 'askKey':
+      return { ...state, keyPrompt: action.adapterId }
   }
-}
-
-/** Le panneau de paramètres se replie tant qu'un tiroir est ouvert. */
-export function isPanelVisible(state: AtelierState): boolean {
-  return state.openDrawer === null
 }

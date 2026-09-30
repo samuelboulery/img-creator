@@ -1,143 +1,118 @@
 import { expect, test, type Page } from '@playwright/test'
 
-/** PNG 1×1 orange — sert de réponse d'API mockée. */
+/** PNG 1×1 — sert de réponse d'API mockée. */
 const PIXEL =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
 
 async function withKey(page: Page) {
-  await page.addInitScript(() => {
-    window.localStorage.setItem('gemini_api_key', 'AIza-test')
-    window.localStorage.setItem('imgc.onboarded', 'true')
-  })
+  await page.addInitScript(() => window.localStorage.setItem('gemini_api_key', 'AIza-test'))
 }
 
+/** Compte les appels : une génération sans clé ne doit rien envoyer. */
 async function mockGenerate(page: Page) {
+  const calls: string[] = []
   await page.route('**/api/generate', async (route) => {
+    calls.push(route.request().postData() ?? '')
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({
-        success: true,
-        data: [{ imageBase64: PIXEL, mimeType: 'image/png' }],
-      }),
+      body: JSON.stringify({ success: true, data: [{ imageBase64: PIXEL, mimeType: 'image/png' }] }),
     })
   })
+  return calls
 }
 
-test("sans clé, l'écran d'accueil s'affiche et laisse entrer", async ({ page }) => {
+async function generate(page: Page, prompt: string) {
+  await page.getByLabel('Prompt', { exact: true }).fill(prompt)
+  await page.getByRole('button', { name: /^Générer/ }).click()
+}
+
+const strip = (page: Page) => page.getByRole('navigation', { name: 'Session' })
+
+test('premier contact : la scène invite à décrire une image', async ({ page }) => {
   await page.addInitScript(() => window.localStorage.clear())
   await page.goto('/')
 
-  const dialog = page.getByRole('dialog', { name: 'Connecte un modèle' })
-  await expect(dialog).toBeVisible()
-
-  await dialog.getByLabel('Google AI Studio').fill('AIza-test')
-  await dialog.getByRole('button', { name: "Entrer dans l'atelier" }).click()
-
-  await expect(dialog).toBeHidden()
-  await expect(page.getByRole('navigation', { name: 'Panneaux' })).toBeVisible()
+  await expect(page).toHaveTitle(/Obskura/)
+  await expect(page.getByRole('heading', { name: 'Décrire une image.' })).toBeVisible()
+  await expect(page.getByRole('complementary', { name: 'Inspecteur' })).toContainText('Modèle')
 })
 
-test('une génération remplit le canvas et le compteur', async ({ page }) => {
+test('sans clé, Générer demande la clé sur la scène et n’envoie rien', async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.clear())
+  const calls = await mockGenerate(page)
+  await page.goto('/')
+
+  await generate(page, 'un phare dans la tempête')
+  const card = page.getByRole('form', { name: 'Coller une clé Google' })
+  await expect(card).toBeVisible()
+  expect(calls).toHaveLength(0)
+
+  // La clé enregistrée, la génération demandée part d'elle-même.
+  await card.getByLabel('Clé Google').fill('AIza-test')
+  await card.getByRole('button', { name: 'Enregistrer la clé' }).click()
+  await expect(page.getByAltText('un phare dans la tempête')).toBeVisible()
+  expect(calls).toHaveLength(1)
+})
+
+test('une génération remplit la bande et la scène, et survit au rechargement', async ({ page }) => {
   await withKey(page)
   await mockGenerate(page)
   await page.goto('/')
 
-  await page.getByLabel('Prompt', { exact: true }).fill('un vase en céramique')
-  await page.getByRole('button', { name: 'Générer' }).click()
-
-  await expect(page.getByAltText('un vase en céramique').first()).toBeVisible()
-  await expect(page.getByText('1 variante · session locale')).toBeVisible()
-})
-
-test('la session est restaurée au rechargement', async ({ page }) => {
-  await withKey(page)
-  await mockGenerate(page)
-  await page.goto('/')
-
-  await page.getByLabel('Prompt', { exact: true }).fill('un vase en céramique')
-  await page.getByRole('button', { name: 'Générer' }).click()
-  await expect(page.getByAltText('un vase en céramique').first()).toBeVisible()
+  await generate(page, 'un vase en céramique')
+  await expect(page.getByAltText('un vase en céramique')).toBeVisible()
+  await expect(strip(page).getByRole('button', { name: /un vase en céramique/ })).toBeVisible()
+  await expect(strip(page)).toContainText('1 image')
 
   await page.reload()
-  await expect(page.getByAltText('un vase en céramique').first()).toBeVisible()
+  await expect(page.getByAltText('un vase en céramique')).toBeVisible()
 })
 
-test('⌘K ouvre la palette, Échap la ferme', async ({ page }) => {
+test('cliquer une vignette ouvre sa fiche ; Supprimer est annulable', async ({ page }) => {
   await withKey(page)
+  await mockGenerate(page)
   await page.goto('/')
+  await generate(page, 'une chaise en rotin')
 
-  await page.keyboard.press('ControlOrMeta+k')
-  const palette = page.getByRole('dialog', { name: 'Palette de commandes' })
-  await expect(palette).toBeVisible()
+  await strip(page).getByRole('button', { name: /une chaise en rotin/ }).click()
+  const inspector = page.getByRole('complementary', { name: 'Inspecteur' })
+  await expect(inspector.getByRole('button', { name: 'Reprendre les réglages' })).toBeVisible()
 
-  await palette.getByLabel('Chercher une commande').fill('modèle')
-  await expect(palette.getByRole('button', { name: 'Changer de modèle' })).toBeVisible()
+  await inspector.getByRole('button', { name: /^Supprimer/ }).click()
+  await expect(strip(page).getByRole('button', { name: /une chaise en rotin/ })).toHaveCount(0)
+  await expect(page.getByText('Image supprimée')).toBeVisible()
 
-  await page.keyboard.press('Escape')
-  await expect(palette).toBeHidden()
+  await page.getByRole('button', { name: /^Annuler/ }).click()
+  await expect(strip(page).getByRole('button', { name: /une chaise en rotin/ })).toBeVisible()
 })
 
-test("le panneau de paramètres se replie sous 1100 px", async ({ page }) => {
+test('un échec de clé propose la clé, pas un « Relancer » stérile', async ({ page }) => {
   await withKey(page)
-  await page.setViewportSize({ width: 1024, height: 800 })
-  await page.goto('/')
-
-  await expect(page.getByRole('complementary', { name: 'Paramètres' })).toBeHidden()
-
-  await page.getByRole('button', { name: 'Paramètres', exact: true }).click()
-  await expect(page.getByRole('complementary', { name: 'Paramètres' })).toBeVisible()
-})
-
-test("une clé manquante mène aux réglages, pas à un « Réessayer » stérile", async ({ page }) => {
-  await page.addInitScript(() => window.localStorage.clear())
-
-  // L'échec que renvoie réellement /api/generate quand aucune clé n'est
-  // configurée — cf. lib/adapters/errors.ts.
-  await page.route('**/api/generate', async (route) => {
-    await route.fulfill({
-      status: 500,
+  await page.route('**/api/generate', (route) =>
+    route.fulfill({
+      status: 401,
       contentType: 'application/json',
       body: JSON.stringify({ success: false, error: 'Clé API invalide ou manquante' }),
     })
-  })
-
+  )
   await page.goto('/')
-  await page.getByRole('dialog').getByRole('button', { name: "Entrer dans l'atelier" }).click()
+  await generate(page, 'un phare dans la tempête')
 
-  await page.getByLabel('Prompt', { exact: true }).fill('un phare dans la tempête')
-  await page.getByRole('button', { name: /^Générer/ }).click()
-
-  // Next ajoute son propre role=alert (route announcer) : viser le bandeau.
-  const banner = page.getByRole('alert').filter({ hasText: 'Clé API' })
-  await expect(banner).toContainText('Clé API invalide ou manquante')
-
-  // Réessayer à l'identique ne peut que réechouer : l'action mène aux clés.
-  const action = banner.getByRole('button', { name: 'Ouvrir les réglages' })
-  await expect(action).toBeVisible()
-  await action.click()
-
-  await expect(page.getByRole('alert').filter({ hasText: 'Clé API' })).toHaveCount(0)
-  await expect(page.getByLabel('Google AI Studio')).toBeVisible()
+  const stage = page.getByRole('region', { name: 'Scène' })
+  await expect(stage.getByRole('heading', { name: 'Clé requise' })).toBeVisible()
+  await expect(stage.getByRole('button', { name: 'Relancer' })).toHaveCount(0)
+  await stage.getByRole('button', { name: 'Coller une clé Google' }).click()
+  await expect(page.getByRole('form', { name: 'Coller une clé Google' })).toBeVisible()
 })
 
-test("l'écran d'accueil tient dans un téléphone", async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 })
-  await page.addInitScript(() => window.localStorage.clear())
+test('⌘K ouvre la palette, Échap la ferme', async ({ page }) => {
   await page.goto('/')
 
-  const dialog = page.getByRole('dialog', { name: 'Connecte un modèle' })
-  await expect(dialog).toBeVisible()
+  await page.keyboard.press('ControlOrMeta+k')
+  const palette = page.getByRole('dialog')
+  await expect(palette).toBeVisible()
 
-  // La carte et son bouton principal restent dans le viewport.
-  const box = await dialog.boundingBox()
-  expect(box!.x).toBeGreaterThanOrEqual(0)
-  expect(box!.x + box!.width).toBeLessThanOrEqual(375)
-
-  await expect(dialog.getByRole('button', { name: "Entrer dans l'atelier" })).toBeInViewport()
-
-  const debordement = await page.evaluate(
-    () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
-  )
-  expect(debordement).toBe(false)
+  await page.keyboard.press('Escape')
+  await expect(palette).toBeHidden()
 })

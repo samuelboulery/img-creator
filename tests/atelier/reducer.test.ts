@@ -1,43 +1,11 @@
 import { describe, expect, test } from 'vitest'
-import {
-  atelierReducer,
-  initialAtelierState,
-  isPanelVisible,
-  type AtelierState,
-} from '@/lib/atelier/reducer'
+import { atelierReducer, initialAtelierState, type AtelierState } from '@/lib/atelier/reducer'
 
 function reduce(state: AtelierState, ...actions: Parameters<typeof atelierReducer>[1][]) {
   return actions.reduce(atelierReducer, state)
 }
 
-describe('atelierReducer', () => {
-  test('un bouton de rail déjà actif referme son tiroir', () => {
-    const opened = reduce(initialAtelierState, { type: 'toggleDrawer', drawer: 'history' })
-    expect(opened.openDrawer).toBe('history')
-
-    const closed = atelierReducer(opened, { type: 'toggleDrawer', drawer: 'history' })
-    expect(closed.openDrawer).toBeNull()
-  })
-
-  test('ouvrir un autre tiroir remplace le précédent', () => {
-    const state = reduce(
-      initialAtelierState,
-      { type: 'toggleDrawer', drawer: 'history' },
-      { type: 'toggleDrawer', drawer: 'recipes' }
-    )
-    expect(state.openDrawer).toBe('recipes')
-  })
-
-  test('le panneau de paramètres se replie tant qu’un tiroir est ouvert', () => {
-    expect(isPanelVisible(initialAtelierState)).toBe(true)
-
-    const withDrawer = atelierReducer(initialAtelierState, {
-      type: 'toggleDrawer',
-      drawer: 'settings',
-    })
-    expect(isPanelVisible(withDrawer)).toBe(false)
-  })
-
+describe('modèles', () => {
   test('choisir un modèle le pose, sans toucher au parallèle', () => {
     const state = reduce(
       initialAtelierState,
@@ -65,18 +33,115 @@ describe('atelierReducer', () => {
     expect(state.adapterId).toBe('gpt-image-2')
     expect(state.parallelId).toBeNull()
   })
+})
 
-  test('closeOverlays ferme le plein écran et la palette sans toucher au reste', () => {
+describe('sélection', () => {
+  test('un clic sélectionne une seule image et la montre', () => {
+    const state = reduce(initialAtelierState, { type: 'select', id: 'a' }, { type: 'select', id: 'b' })
+    expect(state.selectedIds).toEqual(['b'])
+    expect(state.focusId).toBe('b')
+  })
+
+  test('⇧-clic ajoute puis retire', () => {
+    const added = reduce(
+      initialAtelierState,
+      { type: 'select', id: 'a' },
+      { type: 'select', id: 'b', additive: true },
+      { type: 'select', id: 'c', additive: true }
+    )
+    expect(added.selectedIds).toEqual(['a', 'b', 'c'])
+
+    const removed = atelierReducer(added, { type: 'select', id: 'b', additive: true })
+    expect(removed.selectedIds).toEqual(['a', 'c'])
+  })
+
+  test('« ← Réglages » vide la sélection et garde l’image à l’écran', () => {
+    const state = reduce(initialAtelierState, { type: 'select', id: 'a' }, { type: 'clearSelection' })
+    expect(state.selectedIds).toEqual([])
+    expect(state.focusId).toBe('a')
+  })
+
+  test('une génération qui démarre libère la scène pour son cadre d’attente', () => {
+    const state = reduce(initialAtelierState, { type: 'select', id: 'a' }, { type: 'runStarted' })
+    expect(state.selectedIds).toEqual([])
+    expect(state.focusId).toBeNull()
+  })
+
+  test('une génération qui aboutit montre l’image sans quitter les réglages', () => {
+    const state = atelierReducer(initialAtelierState, { type: 'arrived', ids: ['n1', 'n2'] })
+    expect(state.focusId).toBe('n1')
+    expect(state.selectedIds).toEqual([])
+  })
+
+  test('deux modèles en parallèle arrivent en paire sélectionnée', () => {
+    const state = atelierReducer(initialAtelierState, { type: 'arrived', ids: ['a1', 'b1'], pair: true })
+    expect(state.selectedIds).toEqual(['a1', 'b1'])
+  })
+
+  test('une arrivée ne vole pas une sélection faite entre-temps', () => {
     const state = reduce(
       initialAtelierState,
-      { type: 'toggleDrawer', drawer: 'recipes' },
-      { type: 'openViewer' },
-      { type: 'toggleCmd' },
-      { type: 'closeOverlays' }
+      { type: 'select', id: 'ancienne' },
+      { type: 'arrived', ids: ['nouvelle'] }
+    )
+    expect(state.selectedIds).toEqual(['ancienne'])
+    expect(state.focusId).toBe('ancienne')
+  })
+
+  test('oublier des images les retire de la sélection et de la scène', () => {
+    const state = reduce(
+      initialAtelierState,
+      { type: 'select', id: 'a' },
+      { type: 'select', id: 'b', additive: true },
+      { type: 'forget', ids: ['a'] }
+    )
+    expect(state.selectedIds).toEqual(['b'])
+
+    const vide = atelierReducer(state, { type: 'forget', ids: ['b'] })
+    expect(vide.selectedIds).toEqual([])
+    expect(vide.focusId).toBeNull()
+  })
+})
+
+describe('Échap et surcouches', () => {
+  test('Échap ferme d’abord la surcouche, puis vide la sélection', () => {
+    const opened = reduce(
+      initialAtelierState,
+      { type: 'select', id: 'a' },
+      { type: 'openOverlay', overlay: 'history' }
     )
 
-    expect(state.viewerOpen).toBe(false)
-    expect(state.cmdOpen).toBe(false)
-    expect(state.openDrawer).toBe('recipes')
+    const first = atelierReducer(opened, { type: 'escape' })
+    expect(first.overlay).toBeNull()
+    expect(first.selectedIds).toEqual(['a'])
+
+    const second = atelierReducer(first, { type: 'escape' })
+    expect(second.selectedIds).toEqual([])
+    expect(second.focusId).toBe('a')
+  })
+
+  test('Échap retire la carte de clé avant de toucher à la sélection', () => {
+    const state = reduce(
+      initialAtelierState,
+      { type: 'select', id: 'a' },
+      { type: 'askKey', adapterId: 'nano-banana-2' },
+      { type: 'escape' }
+    )
+    expect(state.keyPrompt).toBeNull()
+    expect(state.selectedIds).toEqual(['a'])
+  })
+
+  test('rouvrir la surcouche ouverte la referme', () => {
+    const state = reduce(
+      initialAtelierState,
+      { type: 'toggleOverlay', overlay: 'presets' },
+      { type: 'toggleOverlay', overlay: 'presets' }
+    )
+    expect(state.overlay).toBeNull()
+  })
+
+  test('l’état initial n’est jamais muté', () => {
+    atelierReducer(initialAtelierState, { type: 'select', id: 'a' })
+    expect(initialAtelierState.selectedIds).toEqual([])
   })
 })

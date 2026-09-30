@@ -62,7 +62,6 @@ interface SettingsDrawerProps {
   onKeyChange: (kind: KeyKind, value: string) => void
   prefs: Prefs
   onPrefsChange: (prefs: Prefs) => void
-  onReviewOnboarding: () => void
 }
 
 export default function SettingsDrawer({
@@ -70,7 +69,6 @@ export default function SettingsDrawer({
   onKeyChange,
   prefs,
   onPrefsChange,
-  onReviewOnboarding,
 }: SettingsDrawerProps) {
   const [editingPricing, setEditingPricing] = useState(false)
 
@@ -131,14 +129,6 @@ export default function SettingsDrawer({
           </div>
         )}
       </div>
-
-      <button
-        type="button"
-        onClick={onReviewOnboarding}
-        className="w-full rounded-button bg-field px-3 py-[9px] text-[12.5px] text-body-soft transition-colors duration-[240ms] hover:bg-field-hover"
-      >
-        Revoir l&apos;écran d&apos;accueil
-      </button>
 
       <p className="font-mono text-[10px]/[1.6] text-meta">
         Les clés sont enregistrées dans ce navigateur. L&apos;app n&apos;a ni serveur ni base :
