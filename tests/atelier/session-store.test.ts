@@ -70,8 +70,8 @@ describe('sources d’affichage', () => {
   test('imageSrc préfère la pleine résolution, thumbSrc préfère l’aperçu', () => {
     const full = item('a', 1_000)
 
-    expect(imageSrc(full).startsWith('data:image/png;base64,')).toBe(true)
-    expect(thumbSrc(full).startsWith('data:image/jpeg;base64,')).toBe(true)
+    expect(imageSrc(full)).toMatch(/^data:image\/png;base64,/)
+    expect(thumbSrc(full)).toMatch(/^data:image\/jpeg;base64,/)
   })
 
   test('un item en aperçu seul retombe sur sa vignette', () => {
@@ -82,5 +82,16 @@ describe('sources d’affichage', () => {
 
     expect(hasFullImage(preview)).toBe(false)
     expect(imageSrc(preview)).toBe(preview.thumb)
+  })
+
+  test('sans image ni vignette, aucune source : jamais un src vide qui recharge la page', () => {
+    const empty: GalleryItem = {
+      ...item('a', 1_000),
+      thumb: null,
+      result: { imageBase64: '', mimeType: 'image/png' },
+    }
+
+    expect(imageSrc(empty)).toBeUndefined()
+    expect(thumbSrc(empty)).toBeUndefined()
   })
 })

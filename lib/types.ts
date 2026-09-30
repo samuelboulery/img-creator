@@ -13,22 +13,29 @@ export interface ExtraParam {
 /** Dérivé de `ADAPTERS` (lib/adapters/capabilities.ts) : une seule liste. */
 export type AdapterId = (typeof ADAPTERS)[number]
 
-/** Modes de travail de l'atelier. `ab` compare les deux modèles côte à côte. */
-export type Mode = 'explore' | 'iterate' | 'produce' | 'ab'
-
-/** Tiroirs du rail — un seul ouvert à la fois. */
-export type DrawerId = 'history' | 'recipes' | 'enrich' | 'settings'
-
-/** Onglets du panneau de paramètres. */
-export type PanelTab = 'recipe' | 'json'
-
 /** Les trois clés que l'utilisateur peut enregistrer dans son navigateur. */
 export type KeyKind = 'gemini' | 'openai' | 'text'
 
-/** Une génération en vol : la tuile affiche son compteur de secondes. */
+/** Une génération en vol : ses tuiles affichent un compteur de secondes. */
 export interface PendingTile {
   id: string
+  adapterId: AdapterId
+  /** Nombre d'images attendues. */
+  count: number
   startedAt: number
+}
+
+/**
+ * Une génération qui a échoué. Elle reste dans la session comme une tuile :
+ * la scène montre sa cause et le remède, au lieu d'un bandeau qui disparaît.
+ */
+export interface FailedRun {
+  id: string
+  adapterId: AdapterId
+  prompt: string
+  message: string
+  kind: 'missing-key' | 'quota' | 'safety' | 'no-image' | 'generic'
+  createdAt: string
 }
 
 export type AspectRatio = '1:1' | '16:9' | '9:16' | '4:3'
@@ -40,9 +47,9 @@ export type Moderation = 'auto' | 'low'
 export type Language = 'auto' | 'fr' | 'en'
 
 /**
- * Réglages de rendu. Tous les modèles n'en supportent pas la totalité : voir
- * `lib/adapters/capabilities.ts`, qui décide de ce qui part et de ce qui porte
- * le badge « ignoré ici ».
+ * Réglages de rendu. Tous les modèles n'en lisent pas la totalité : voir
+ * `lib/adapters/capabilities.ts`, qui décide de ce qui part et de ce que
+ * l'inspecteur affiche.
  */
 export interface GenerationParams {
   aspectRatio: AspectRatio
@@ -55,10 +62,6 @@ export interface GenerationParams {
   transparent: boolean
   /** 20–100, sans effet en PNG. */
   compression: number
-  /** Guidage (CFG), 1–20 par pas de 0,5. */
-  guidance: number
-  steps: number
-  sampler: string
   personGeneration: PersonGeneration
   moderation: Moderation
   language: Language
@@ -123,7 +126,7 @@ export interface GalleryItem {
   negative: string
   seed: number | null
   params: GenerationParams
-  /** Trois couleurs dominantes extraites de l'image — alimente le fond ambiant. */
+  /** Trois couleurs dominantes extraites de l'image — affichées dans sa fiche. */
   palette: [string, string, string] | null
   /**
    * Aperçu JPEG ~320 px en data URL, calculé après coup. C'est le seul champ

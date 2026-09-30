@@ -2,13 +2,18 @@ import { shortId } from './diff'
 import { hasFullImage } from './session-store'
 import type { GalleryItem } from '@/lib/types'
 
+export type ExportFormat = 'original' | 'png' | 'jpeg'
+
+const EXTENSIONS: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
+
 function download(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
   link.download = filename
   link.click()
-  URL.revokeObjectURL(url)
+  // Révoquer tout de suite peut annuler le téléchargement (Safari, Firefox).
+  setTimeout(() => URL.revokeObjectURL(url), 10_000)
 }
 
 function base64ToBlob(base64: string, mimeType: string): Blob {
@@ -23,38 +28,67 @@ export function downloadJson(content: string, filename: string) {
 }
 
 export function downloadImage(item: GalleryItem) {
-  const extension = item.result.mimeType.split('/')[1] ?? 'png'
-  download(base64ToBlob(item.result.imageBase64, item.result.mimeType), `${shortId(item)}.${extension}`)
+  download(base64ToBlob(item.result.imageBase64, item.result.mimeType), exportFileName(item, 0, 'original'))
+}
+
+/** `obskura-03-gen_ab12.jpg` : l'ordre de la sélection, puis l'identifiant court. */
+export function exportFileName(item: GalleryItem, index: number, format: ExportFormat): string {
+  const mime = format === 'original' ? item.result.mimeType : `image/${format}`
+  const extension = EXTENSIONS[mime] ?? 'png'
+  return `obskura-${String(index + 1).padStart(2, '0')}-${shortId(item)}.${extension}`
+}
+
+/** De quoi refaire chaque image. Un aperçu seul y figure, sans fichier. */
+export function exportManifest(items: GalleryItem[], format: ExportFormat) {
+  return {
+    version: 1,
+    images: items.map((item, index) => ({
+      file: hasFullImage(item) ? exportFileName(item, index, format) : null,
+      model: item.adapterId,
+      prompt: item.prompt,
+      negative: item.negative,
+      seed: item.seed,
+      params: item.params,
+      createdAt: item.createdAt,
+    })),
+  }
+}
+
+async function convert(item: GalleryItem, format: 'png' | 'jpeg'): Promise<Blob> {
+  const source = base64ToBlob(item.result.imageBase64, item.result.mimeType)
+  if (item.result.mimeType === `image/${format}`) return source
+
+  const bitmap = await createImageBitmap(source)
+  const canvas = document.createElement('canvas')
+  canvas.width = bitmap.width
+  canvas.height = bitmap.height
+  const context = canvas.getContext('2d')
+  if (!context) throw new Error('Canvas 2D indisponible')
+  // Le JPEG n'a pas de transparence : fond blanc plutôt que noir.
+  if (format === 'jpeg') {
+    context.fillStyle = '#fff'
+    context.fillRect(0, 0, canvas.width, canvas.height)
+  }
+  context.drawImage(bitmap, 0, 0)
+  bitmap.close()
+
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Conversion impossible'))), `image/${format}`, 0.92)
+  )
 }
 
 /**
- * Exporte la planche : une image par fichier, plus un `.json` qui garde les
- * recettes — prompt, négatif, modèle, graine et réglages de chaque visuel.
- *
- * Les items en aperçu seul — pleine résolution perdue au rechargement — n'ont
- * pas d'image à écrire : leur recette part quand même, jamais un fichier vide.
+ * Un fichier par image, plus le manifeste si demandé.
  *
  * ponytail: pas de zip, donc un fichier par image. Ajouter une dépendance de
  * compression seulement si le nombre de fichiers devient gênant.
  */
-export function exportSheet(items: GalleryItem[]) {
-  for (const item of items) {
-    if (hasFullImage(item)) downloadImage(item)
+export async function exportImages(items: GalleryItem[], format: ExportFormat, withSettings: boolean) {
+  for (const [index, item] of items.entries()) {
+    if (!hasFullImage(item)) continue
+    const blob =
+      format === 'original' ? base64ToBlob(item.result.imageBase64, item.result.mimeType) : await convert(item, format)
+    download(blob, exportFileName(item, index, format))
   }
-
-  const recipes = items.map((item) => ({
-    id: shortId(item),
-    model: item.adapterId,
-    prompt: item.prompt,
-    negative: item.negative,
-    seed: item.seed,
-    params: item.params,
-    costEur: item.costEur,
-    createdAt: item.createdAt,
-  }))
-
-  download(
-    new Blob([JSON.stringify({ version: 1, recipes }, null, 2)], { type: 'application/json' }),
-    'planche-recettes.json'
-  )
+  if (withSettings) downloadJson(JSON.stringify(exportManifest(items, format), null, 2), 'obskura-reglages.json')
 }

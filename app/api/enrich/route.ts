@@ -37,7 +37,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnrichRespons
 
   if (!allowed) {
     return NextResponse.json(
-      { success: false, error: `Trop de requêtes — réessaie dans ${retryAfter}s` },
+      { success: false, error: `Trop de requêtes — réessayer dans ${retryAfter} s` },
       { status: 429, headers: { 'Retry-After': String(retryAfter) } }
     )
   }
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnrichRespons
   const apiKey = req.headers.get('x-api-key')
   if (!apiKey) {
     return NextResponse.json(
-      { success: false, error: 'Aucune clé texte enregistrée — la fonction reste inactive.' },
+      { success: false, error: 'Aucune clé enregistrée pour l’enrichissement.' },
       { status: 400 }
     )
   }
@@ -95,9 +95,9 @@ export async function POST(req: NextRequest): Promise<NextResponse<EnrichRespons
     console.error('[enrich] échec de la requête')
 
     const clientMessage = /api.key|authentication|unauthorized/i.test(message)
-      ? 'Clé texte invalide'
+      ? 'Clé invalide pour l’enrichissement'
       : /quota|rate.limit|billing/i.test(message)
-        ? 'Quota de ta clé texte atteint'
+        ? 'Quota de la clé atteint'
         : "Échec de l'enrichissement"
 
     return NextResponse.json({ success: false, error: clientMessage }, { status: 500 })

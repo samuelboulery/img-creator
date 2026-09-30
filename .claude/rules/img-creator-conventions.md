@@ -11,11 +11,11 @@ Ces règles s'appliquent à chaque session Claude sur ce projet. Sans exception.
 
 ## Organisation des fichiers
 
-- `lib/adapters/` — un fichier par API image (ex: `gemini.ts`, `replicate.ts`)
+- `lib/adapters/` — un fichier par API image (ex: `nano-banana-2.ts`, `gpt-image.ts`)
 - `lib/types.ts` — tous les types partagés (PromptParams, GenerationResult, AdapterConfig)
 - `components/` — composants React en PascalCase, un composant par fichier
 - `app/api/generate/` — route handler Next.js, proxy vers les adapters
-- `app/page.tsx` — page principale, orchestre PromptForm + ImageGallery
+- `app/page.tsx` — page principale : TopBar, Strip, Stage + Composer, inspecteur, surcouches
 
 ## Interface commune des adapters
 

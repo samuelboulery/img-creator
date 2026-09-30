@@ -2,5 +2,5 @@ import { expect, test } from '@playwright/test'
 
 test("la page d'accueil se charge", async ({ page }) => {
   await page.goto('/')
-  await expect(page).toHaveTitle(/img-creator/)
+  await expect(page).toHaveTitle(/Obskura/)
 })

@@ -1,14 +1,18 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { MagnifyingGlass, type Icon } from '@phosphor-icons/react'
-import { useFocusTrap } from '@/lib/atelier/focus-trap'
+import { useId, useState } from 'react'
+import { MagnifyingGlassIcon } from '@phosphor-icons/react/dist/ssr'
+import Dialog from './Dialog'
+import { Kbd } from '@/components/atelier/ui'
+import { useT } from '@/lib/i18n'
 
 export interface Command {
   id: string
+  group: string
   label: string
-  shortcut?: string
-  icon: Icon
+  /** Ce qui s'affiche à droite : « actuel », un raccourci… */
+  hint?: string
+  keys?: string[]
   run: () => void
 }
 
@@ -17,103 +21,107 @@ interface CommandPaletteProps {
   onClose: () => void
 }
 
+/** ⌘K : toutes les actions, filtrées au clavier. Combobox + listbox ARIA. */
 export default function CommandPalette({ commands, onClose }: CommandPaletteProps) {
+  const t = useT()
+  const listId = useId()
   const [query, setQuery] = useState('')
   const [cursor, setCursor] = useState(0)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const dialogRef = useRef<HTMLDivElement>(null)
-  useFocusTrap(dialogRef)
 
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase()
-    if (!needle) return commands
-    return commands.filter((command) => command.label.toLocaleLowerCase().includes(needle))
-  }, [commands, query])
+  const needle = query.trim().toLocaleLowerCase()
+  const filtered = commands.filter(
+    (command) => !needle || `${command.group} ${command.label}`.toLocaleLowerCase().includes(needle)
+  )
+  const active = Math.min(cursor, filtered.length - 1)
+  const groups = [...new Set(filtered.map((command) => command.group))]
 
-  useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
+  function run(command: Command | undefined) {
+    if (!command) return
+    onClose()
+    command.run()
+  }
 
   function onKeyDown(event: React.KeyboardEvent) {
-    if (event.key === 'ArrowDown') {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault()
-      setCursor((previous) => Math.min(previous + 1, filtered.length - 1))
-    }
-    if (event.key === 'ArrowUp') {
-      event.preventDefault()
-      setCursor((previous) => Math.max(previous - 1, 0))
+      const step = event.key === 'ArrowDown' ? 1 : -1
+      setCursor((active + step + filtered.length) % Math.max(1, filtered.length))
     }
     if (event.key === 'Enter') {
       event.preventDefault()
-      const command = filtered[cursor]
-      if (command) {
-        command.run()
-        onClose()
-      }
+      run(filtered[active])
     }
   }
 
   return (
-    <div
-      className="absolute inset-0 z-50 bg-[rgb(6_8_11/0.6)] backdrop-blur-[14px]"
-      onClick={onClose}
+    <Dialog
+      title={t.palette.label}
+      header={false}
+      width={560}
+      onClose={onClose}
+      footer={
+        <p className="meta flex gap-4">
+          <span className="flex items-center gap-1.5">
+            <Kbd keys={['↑', '↓']} /> {t.palette.move}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Kbd keys={['↵']} /> {t.palette.choose}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Kbd keys={['Esc']} /> {t.palette.close}
+          </span>
+        </p>
+      }
     >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Palette de commandes"
-        onClick={(event) => event.stopPropagation()}
-        onKeyDown={onKeyDown}
-        className="mx-auto mt-[96px] w-[460px] overflow-hidden rounded-panel border border-line bg-panel/72 backdrop-blur-[28px]"
-      >
-        <div className="flex items-center gap-[10px] border-b border-separator px-4 py-[12px]">
-          <MagnifyingGlass size={15} className="text-icon" />
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value)
-              setCursor(0)
-            }}
-            placeholder="Chercher une commande…"
-            aria-label="Chercher une commande"
-            className="flex-1 bg-transparent text-[13px] text-body placeholder:text-faint focus:outline-none"
-          />
-          <span className="font-mono text-[10px] text-meta">esc</span>
-        </div>
-
-        <ul className="max-h-[320px] overflow-y-auto p-[6px]">
-          {filtered.map((command, index) => {
-            const Glyph = command.icon
-            return (
-              <li key={command.id}>
-                <button
-                  type="button"
-                  onMouseEnter={() => setCursor(index)}
-                  onClick={() => {
-                    command.run()
-                    onClose()
-                  }}
-                  className={`flex w-full items-center gap-[10px] rounded-chip px-3 py-[8px] text-left transition-colors duration-[240ms] ${
-                    index === cursor ? 'bg-field-hover' : ''
-                  }`}
-                >
-                  <Glyph size={16} className="shrink-0 text-icon" />
-                  <span className="flex-1 truncate text-[13px] text-body">{command.label}</span>
-                  {command.shortcut && (
-                    <span className="font-mono text-[10.5px] text-meta">{command.shortcut}</span>
-                  )}
-                </button>
-              </li>
-            )
-          })}
-
-          {filtered.length === 0 && (
-            <li className="px-3 py-[10px] text-[12.5px] text-meta">Aucune commande</li>
-          )}
-        </ul>
+      <div className="flex items-center gap-2 border-b border-hairline px-4">
+        <MagnifyingGlassIcon size={16} aria-hidden className="text-ink-soft" />
+        <input
+          autoFocus
+          role="combobox"
+          aria-expanded
+          aria-controls={listId}
+          aria-activedescendant={filtered[active] ? `${listId}-${filtered[active].id}` : undefined}
+          aria-label={t.palette.placeholder}
+          placeholder={t.palette.placeholder}
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value)
+            setCursor(0)
+          }}
+          onKeyDown={onKeyDown}
+          className="h-12 flex-1 bg-transparent text-14 outline-none placeholder:text-dim focus-visible:outline-none"
+        />
       </div>
-    </div>
+
+      <div id={listId} role="listbox" aria-label={t.palette.label} className="max-h-[380px] overflow-y-auto p-1">
+        {filtered.length === 0 && <p className="meta p-3">{t.palette.none}</p>}
+        {groups.map((group) => (
+          <div key={group} role="group" aria-label={group}>
+            <p className="lbl px-3 pt-2.5 pb-1">{group}</p>
+            {filtered
+              .filter((command) => command.group === group)
+              .map((command) => {
+                const index = filtered.indexOf(command)
+                return (
+                  <div
+                    key={command.id}
+                    id={`${listId}-${command.id}`}
+                    role="option"
+                    aria-selected={index === active}
+                    onPointerMove={() => setCursor(index)}
+                    onClick={() => run(command)}
+                    className={`flex h-9 cursor-pointer items-center justify-between gap-3 rounded-xs px-3 text-13 ${
+                      index === active ? 'bg-raised text-ink' : 'text-ink-soft'
+                    }`}
+                  >
+                    {command.label}
+                    {command.keys ? <Kbd keys={command.keys} /> : command.hint && <span className="meta">{command.hint}</span>}
+                  </div>
+                )
+              })}
+          </div>
+        ))}
+      </div>
+    </Dialog>
   )
 }
