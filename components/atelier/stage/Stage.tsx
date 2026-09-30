@@ -2,9 +2,9 @@
 
 import { WarningCircleIcon } from '@phosphor-icons/react/dist/ssr'
 import KeyCard from './KeyCard'
-import { Button, Kbd } from '@/components/atelier/ui'
+import { Button, Kbd, Shot } from '@/components/atelier/ui'
 import { MODELS, supports } from '@/lib/adapters/capabilities'
-import { hasFullImage, imageSrc, thumbSrc } from '@/lib/atelier/session-store'
+import { imageSrc, thumbSrc } from '@/lib/atelier/session-store'
 import { resolveSelection, usualSeconds, type Resolved } from '@/lib/atelier/session-view'
 import { elapsedSeconds, useNow } from '@/lib/atelier/use-now'
 import type { Atelier } from '@/lib/atelier/use-atelier'
@@ -88,10 +88,10 @@ function Single({ entry, atelier }: { entry: Resolved; atelier: Atelier }) {
   if (entry.kind === 'failure') return <Failure failure={entry.failure} atelier={atelier} />
   const { item } = entry
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={hasFullImage(item) ? imageSrc(item) : thumbSrc(item)}
+    <Shot
+      src={imageSrc(item)}
       alt={item.prompt}
+      ratio={item.params.aspectRatio}
       className="max-h-full max-w-full object-contain"
     />
   )
@@ -104,8 +104,12 @@ function Pair({ entries }: { entries: Resolved[] }) {
         <figure key={entry.id} className="flex min-h-0 min-w-0 flex-col items-center justify-center gap-2">
           {entry.kind === 'item' ? (
             <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={imageSrc(entry.item)} alt={entry.item.prompt} className="min-h-0 max-w-full flex-1 object-contain" />
+              <Shot
+                src={imageSrc(entry.item)}
+                alt={entry.item.prompt}
+                ratio={entry.item.params.aspectRatio}
+                className="min-h-0 max-w-full flex-1 object-contain"
+              />
               <figcaption className="meta">{MODELS[entry.item.adapterId].name}</figcaption>
             </>
           ) : (
@@ -128,8 +132,12 @@ function Grid({ entries, onSelect }: { entries: Resolved[]; onSelect: (id: strin
       {items.map((item) => (
         <li key={item.id} className="flex min-h-0 items-center justify-center">
           <button type="button" onClick={() => onSelect(item.id)} className="flex h-full w-full items-center justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={thumbSrc(item)} alt={item.prompt} className="max-h-full max-w-full object-contain" />
+            <Shot
+              src={thumbSrc(item)}
+              alt={item.prompt}
+              ratio={item.params.aspectRatio}
+              className="max-h-full max-w-full object-contain"
+            />
           </button>
         </li>
       ))}

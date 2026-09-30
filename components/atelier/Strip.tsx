@@ -96,8 +96,10 @@ export default function Strip({ items, failures, pending, selectedIds, onSelect,
                   hasFullImage(entry.item) ? '' : 'outline-1 -outline-offset-1 outline-hairline-strong outline-dashed'
                 }`}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={thumbSrc(entry.item)} alt="" className="h-full w-full object-cover" />
+                {thumbSrc(entry.item) && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={thumbSrc(entry.item)} alt="" className="h-full w-full object-cover" />
+                )}
                 {multi && (
                   <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-[1px] bg-ink text-stage">
                     <CheckIcon size={12} weight="bold" aria-hidden />

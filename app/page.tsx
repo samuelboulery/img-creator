@@ -12,9 +12,10 @@ import Composer from '@/components/atelier/Composer'
 import Drawer from '@/components/atelier/Drawer'
 import Strip from '@/components/atelier/Strip'
 import TopBar from '@/components/atelier/TopBar'
-import { InspectorHeader } from '@/components/atelier/inspector/ImageInspector'
 import FailureInspector from '@/components/atelier/inspector/FailureInspector'
 import ImageInspector from '@/components/atelier/inspector/ImageInspector'
+import MultiInspector from '@/components/atelier/inspector/MultiInspector'
+import PairInspector from '@/components/atelier/inspector/PairInspector'
 import SettingsInspector from '@/components/atelier/inspector/SettingsInspector'
 import HistoryDrawer from '@/components/atelier/drawers/HistoryDrawer'
 import RecipesDrawer from '@/components/atelier/drawers/RecipesDrawer'
@@ -22,7 +23,6 @@ import SettingsDrawer from '@/components/atelier/drawers/SettingsDrawer'
 import CommandPalette, { type Command } from '@/components/atelier/overlays/CommandPalette'
 import Stage from '@/components/atelier/stage/Stage'
 import { useShortcuts } from '@/components/atelier/use-shortcuts'
-import { Button } from '@/components/atelier/ui'
 import { resolveSelection } from '@/lib/atelier/session-view'
 import { useAtelier, type Atelier } from '@/lib/atelier/use-atelier'
 import { I18nProvider, useT } from '@/lib/i18n'
@@ -102,17 +102,13 @@ function Inspector({ atelier }: { atelier: Atelier }) {
         <FailureInspector failure={entry.failure} atelier={atelier} />
       )
   } else {
-    // ponytail: fiche multiple minimale — l'export et la comparaison arrivent au lot 5.
-    body = (
-      <>
-        <InspectorHeader onBack={() => dispatch({ type: 'clearSelection' })} meta={t.multi.title(selected.length)} />
-        <div className="p-2">
-          <Button full variant="danger" onClick={() => atelier.removeItems(selected.map((entry) => entry.id))}>
-            {t.multi.delete(selected.length)}
-          </Button>
-        </div>
-      </>
-    )
+    const images = selected.flatMap((entry) => (entry.kind === 'item' ? [entry.item] : []))
+    body =
+      images.length === 2 && selected.length === 2 ? (
+        <PairInspector pair={[images[0], images[1]]} atelier={atelier} />
+      ) : (
+        <MultiInspector items={images} ids={selected.map((entry) => entry.id)} atelier={atelier} />
+      )
   }
 
   return (

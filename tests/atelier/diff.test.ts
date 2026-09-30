@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { buildLineage, diffParams, diffPrompt, lineageDepth } from '@/lib/atelier/diff'
+import { buildLineage, diffParams, diffPrompt, lineageDepth, pairDifferences } from '@/lib/atelier/diff'
 import { DEFAULT_PARAMS } from '@/lib/atelier/params'
 import type { GalleryItem } from '@/lib/types'
 
@@ -81,5 +81,28 @@ describe('arborescence', () => {
   test('un parent absent ne fait pas disparaître l’enfant', () => {
     const items = [item('orphan', 'disparu', '2026-08-15T10:00:00Z')]
     expect(buildLineage(items).map((node) => node.item.id)).toEqual(['orphan'])
+  })
+})
+
+describe('pairDifferences', () => {
+  test('liste modèle, prompt et réglages qui diffèrent, et compte le reste', () => {
+    const left = { ...item('a', null, '2026-09-30T10:00:00Z'), seed: 12 }
+    const right = {
+      ...item('b', null, '2026-09-30T10:00:00Z'),
+      adapterId: 'gpt-image-2' as const,
+      seed: 12,
+      params: { ...DEFAULT_PARAMS, aspectRatio: '16:9' as const },
+    }
+
+    const { deltas, same } = pairDifferences(left, right)
+    expect(deltas.map((delta) => delta.key)).toEqual(['model', 'aspectRatio'])
+    expect(deltas[1]).toEqual({ key: 'aspectRatio', left: DEFAULT_PARAMS.aspectRatio, right: '16:9' })
+    expect(same).toBeGreaterThan(0)
+  })
+
+  test('la graine comparée est celle réellement envoyée, pas le réglage', () => {
+    const left = { ...item('a', null, 't'), seed: 1 }
+    const right = { ...item('b', null, 't'), seed: 2 }
+    expect(pairDifferences(left, right).deltas).toEqual([{ key: 'seed', left: '1', right: '2' }])
   })
 })

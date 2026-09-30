@@ -91,6 +91,32 @@ export function diffParams(
   }))
 }
 
+export type PairKey = PayloadParam | 'model' | 'prompt'
+
+export interface PairDelta {
+  key: PairKey
+  left: string
+  right: string
+}
+
+/**
+ * Écarts entre deux images comparées. La graine est celle réellement envoyée
+ * (`item.seed`), pas le réglage : deux tirages aléatoires diffèrent aussi.
+ */
+export function pairDifferences(a: GalleryItem, b: GalleryItem): { deltas: PairDelta[]; same: number } {
+  const value = (item: GalleryItem, key: PairKey): string => {
+    if (key === 'model') return item.adapterId
+    if (key === 'prompt') return item.prompt
+    if (key === 'seed') return item.seed === null ? '—' : String(item.seed)
+    return show(item.params[key])
+  }
+  const keys: PairKey[] = ['model', 'prompt', ...COMPARED]
+  const deltas = keys
+    .map((key) => ({ key, left: value(a, key), right: value(b, key) }))
+    .filter((delta) => delta.left !== delta.right)
+  return { deltas, same: keys.length - deltas.length }
+}
+
 export interface LineageNode {
   item: GalleryItem
   depth: number

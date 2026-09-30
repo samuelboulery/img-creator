@@ -116,3 +116,44 @@ test('⌘K ouvre la palette, Échap la ferme', async ({ page }) => {
   await page.keyboard.press('Escape')
   await expect(palette).toBeHidden()
 })
+
+test('⇧-clic sur deux vignettes : comparaison, puis garder une image (annulable)', async ({ page }) => {
+  await withKey(page)
+  await mockGenerate(page)
+  await page.goto('/')
+  await generate(page, 'un vase bleu')
+  await expect(page.getByAltText('un vase bleu')).toBeVisible()
+  await generate(page, 'un vase rouge')
+  await expect(page.getByAltText('un vase rouge')).toBeVisible()
+
+  await strip(page).getByRole('button', { name: /un vase bleu/ }).click()
+  await strip(page).getByRole('button', { name: /un vase rouge/ }).click({ modifiers: ['Shift'] })
+
+  const inspector = page.getByRole('complementary', { name: 'Inspecteur' })
+  await expect(inspector).toContainText('Comparaison')
+  await expect(inspector).toContainText('un vase rouge')
+
+  await inspector.getByRole('button', { name: 'Garder celle de gauche' }).click()
+  await expect(strip(page).getByRole('button', { name: /un vase rouge/ })).toHaveCount(0)
+  await page.getByRole('button', { name: /^Annuler/ }).click()
+  await expect(strip(page).getByRole('button', { name: /un vase rouge/ })).toBeVisible()
+})
+
+test('trois images sélectionnées : la fiche propose l’export', async ({ page }) => {
+  await withKey(page)
+  await mockGenerate(page)
+  await page.goto('/')
+  for (const prompt of ['une pomme', 'une poire', 'une prune']) {
+    await generate(page, prompt)
+    await expect(page.getByAltText(prompt)).toBeVisible()
+  }
+  await strip(page).getByRole('button', { name: /une pomme/ }).click()
+  await strip(page).getByRole('button', { name: /une poire/ }).click({ modifiers: ['Shift'] })
+  await strip(page).getByRole('button', { name: /une prune/ }).click({ modifiers: ['Shift'] })
+
+  const inspector = page.getByRole('complementary', { name: 'Inspecteur' })
+  await expect(inspector.getByRole('button', { name: /Télécharger 3 images/ })).toBeVisible()
+  const download = page.waitForEvent('download')
+  await inspector.getByRole('button', { name: /Télécharger 3 images/ }).click()
+  expect((await download).suggestedFilename()).toMatch(/^obskura-0\d-gen_\w{4}\.png$/)
+})

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { downloadImage } from '@/lib/atelier/export'
+import { downloadImage, exportImages } from '@/lib/atelier/export'
 import { hasFullImage } from '@/lib/atelier/session-store'
 import { resolveSelection, stripEntries } from '@/lib/atelier/session-view'
 import type { Atelier } from '@/lib/atelier/use-atelier'
@@ -47,6 +47,10 @@ export function useShortcuts(atelier: Atelier, promptRef: React.RefObject<HTMLTe
       if (mod && key === 'enter') return act(() => void a.generate())
       if (mod && key === '.') return act(a.stop)
       if (mod && key === 'e' && single && hasFullImage(single)) return act(() => downloadImage(single))
+      if (mod && key === 'e' && selected.length > 1) {
+        const images = selected.flatMap((entry) => (entry.kind === 'item' ? [entry.item] : []))
+        return act(() => void exportImages(images, 'original', false))
+      }
       if (mod && key === 'z' && !typing && a.notice && 'undo' in a.notice) return act(a.undo)
       if (event.key === 'Escape') return dispatch({ type: 'escape' })
       if (mod || event.altKey || typing) return

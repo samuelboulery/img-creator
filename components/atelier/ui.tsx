@@ -210,3 +210,22 @@ export function KeyValue({ label, value }: { label: string; value: ReactNode }) 
     </div>
   )
 }
+
+/**
+ * Une image de la session. Sans source — pleine résolution et aperçu perdus au
+ * rechargement — un cadre neutre la remplace : jamais de `src` vide.
+ */
+export function Shot({ src, alt, ratio, className = '' }: { src: string | undefined; alt: string; ratio: string; className?: string }) {
+  if (src) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt={alt} className={className} />
+  }
+  return (
+    <div
+      role="img"
+      aria-label={alt}
+      style={{ aspectRatio: ratio.replace(':', ' / ') }}
+      className={`bg-sunken outline-1 -outline-offset-1 outline-hairline-strong outline-dashed ${className}`}
+    />
+  )
+}
