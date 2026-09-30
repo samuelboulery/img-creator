@@ -9,7 +9,6 @@ import Slider from './Slider'
 import Switch from './Switch'
 import {
   randomSeed,
-  SAMPLERS,
   setParam,
   weightLabel,
   type RecipeState,
@@ -308,37 +307,6 @@ export default function RecipeTab({
           </p>
         </div>
 
-        <Slider
-          label="Guidage (CFG)"
-          valueLabel={params.guidance.toLocaleString('fr-FR')}
-          value={params.guidance}
-          min={1}
-          max={20}
-          step={0.5}
-          lowBound="1"
-          highBound="20"
-          ignored={!supports(adapterId, 'guidance')}
-          onChange={(value) => set('guidance', value)}
-        />
-        <Slider
-          label="Étapes"
-          valueLabel={String(params.steps)}
-          value={params.steps}
-          min={10}
-          max={80}
-          step={1}
-          lowBound="10"
-          highBound="80"
-          ignored={!supports(adapterId, 'steps')}
-          onChange={(value) => set('steps', value)}
-        />
-        <Choice
-          label="Échantillonneur"
-          options={SAMPLERS.map((sampler) => ({ value: sampler, label: sampler }))}
-          value={params.sampler}
-          ignored={!supports(adapterId, 'sampler')}
-          onChange={(value) => set('sampler', value)}
-        />
       </Section>
 
       <Section

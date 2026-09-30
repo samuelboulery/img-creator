@@ -1,3 +1,4 @@
+import { resolutionsOf } from './capabilities'
 import type {
   AdapterId,
   ExtraParam,
@@ -117,7 +118,7 @@ function extraParams(value: unknown): ExtraParam[] {
   })
 }
 
-function params(value: unknown): GenerationParams {
+function params(value: unknown, adapterId: AdapterId): GenerationParams {
   if (typeof value !== 'object' || value === null) fail('params est requis')
   const p = value as Record<string, unknown>
 
@@ -133,16 +134,14 @@ function params(value: unknown): GenerationParams {
 
   return {
     aspectRatio: oneOf(p.aspectRatio, ASPECT_RATIOS, 'params.aspectRatio'),
-    resolution: oneOf(p.resolution, RESOLUTIONS, 'params.resolution'),
+    // Bornée par le modèle : 6K et 8K n'existent que chez GPT Image 2.5.
+    resolution: oneOf(p.resolution, resolutionsOf(adapterId), 'params.resolution'),
     batch: oneOf(p.batch, BATCHES, 'params.batch'),
     seed: (seed as number | null) ?? null,
     seedLock: Boolean(p.seedLock),
     fileFormat: oneOf(p.fileFormat ?? 'png', FILE_FORMATS, 'params.fileFormat'),
     transparent: Boolean(p.transparent),
     compression,
-    guidance: typeof p.guidance === 'number' ? p.guidance : 7,
-    steps: typeof p.steps === 'number' ? p.steps : 30,
-    sampler: typeof p.sampler === 'string' ? p.sampler : 'euler',
     personGeneration: oneOf(
       p.personGeneration ?? 'allow_adult',
       PERSON_GENERATIONS,
@@ -192,6 +191,6 @@ export function parseGenerationRequest(raw: unknown): GenerationRequest {
     styleWeight: weight(body.styleWeight, 'styleWeight'),
     identityLock: Boolean(body.identityLock),
     paletteTransfer: Boolean(body.paletteTransfer),
-    params: params(body.params),
+    params: params(body.params, adapterId),
   }
 }

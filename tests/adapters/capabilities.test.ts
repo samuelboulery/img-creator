@@ -2,7 +2,11 @@ import { describe, expect, test } from 'vitest'
 import {
   ADAPTERS,
   ALL_PARAMS,
+  fitParams,
   ignoredParams,
+  MODELS,
+  modelChanges,
+  resolutionsOf,
   supports,
   type PayloadParam,
 } from '@/lib/adapters/capabilities'
@@ -36,9 +40,6 @@ const MUTATIONS: Partial<Record<PayloadParam, Partial<typeof DEFAULT_PARAMS>>> =
   // Le PNG n'a pas de compression (output_compression est forcé à null) :
   // pour observer le réglage, il faut un format qui la porte.
   compression: { fileFormat: 'jpeg', compression: 42 },
-  guidance: { guidance: 19 },
-  steps: { steps: 77 },
-  sampler: { sampler: 'dpm' },
   personGeneration: { personGeneration: 'dont_allow' },
   moderation: { moderation: 'low' },
 }
@@ -141,5 +142,50 @@ describe('contrat : buildPayload est pure', () => {
 
     const corps = buildPayload(sans) as { config: Record<string, unknown> }
     expect(corps.config.seed).toBeNull()
+  })
+})
+
+describe('descripteurs de modèles', () => {
+  test('chaque adapter a un descripteur complet', () => {
+    for (const adapterId of ADAPTERS) {
+      const spec = MODELS[adapterId]
+      expect(spec.id).toBe(adapterId)
+      expect(spec.name.length).toBeGreaterThan(0)
+      expect(spec.resolution.options.length).toBeGreaterThan(0)
+    }
+  })
+
+  test('les crans de résolution suivent le modèle', () => {
+    expect(resolutionsOf('nano-banana-2')).toEqual(['1K', '2K', '4K'])
+    expect(resolutionsOf('gpt-image-2')).toEqual(['1K', '2K', '4K'])
+    expect(resolutionsOf('gpt-image-2.5-flare')).toEqual(['1K', '2K', '4K', '6K', '8K'])
+  })
+
+  test('GPT affiche la qualité réellement envoyée', () => {
+    const labels = MODELS['gpt-image-2.5-sunburst'].resolution.options.map((o) => o.label)
+    expect(labels).toEqual(['low', 'medium', 'high', 'xhigh', 'max'])
+    expect(MODELS['nano-banana-2'].resolution.kind).toBe('resolution')
+  })
+
+  test('changer de modèle recale une résolution hors plage', () => {
+    const params = { ...DEFAULT_PARAMS, resolution: '8K' as const }
+    expect(fitParams(params, 'nano-banana-2').resolution).toBe('4K')
+    expect(fitParams(params, 'gpt-image-2.5-flare').resolution).toBe('8K')
+  })
+
+  test('une résolution valide ne bouge pas, et rien n’est muté', () => {
+    const params = { ...DEFAULT_PARAMS, resolution: '1K' as const }
+    const fitted = fitParams(params, 'gpt-image-2')
+    expect(fitted.resolution).toBe('1K')
+    expect(params.resolution).toBe('1K')
+  })
+
+  test('la note de changement de modèle liste ce qui arrive et ce qui part', () => {
+    const { added, removed } = modelChanges('nano-banana-2', 'gpt-image-2')
+    expect(added).toEqual(
+      expect.arrayContaining(['fileFormat', 'transparent', 'compression', 'moderation'])
+    )
+    expect(removed).toEqual(expect.arrayContaining(['seed', 'personGeneration']))
+    expect(modelChanges('gpt-image-2', 'gpt-image-2.5-flare')).toEqual({ added: [], removed: [] })
   })
 })

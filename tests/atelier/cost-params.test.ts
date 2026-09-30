@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { DEFAULT_PRICING, estimateCost, formatEur } from '@/lib/atelier/cost'
-import { DEFAULT_PARAMS, DEFAULT_RECIPE_STATE, referencesOf } from '@/lib/atelier/params'
+import { DEFAULT_PARAMS, DEFAULT_RECIPE_STATE, normalizeParams, referencesOf } from '@/lib/atelier/params'
 import { ADAPTERS, ALL_PARAMS } from '@/lib/adapters/capabilities'
 
 describe('estimation de coût', () => {
@@ -47,6 +47,21 @@ describe('réglages par défaut', () => {
     for (const param of ALL_PARAMS) {
       expect(DEFAULT_PARAMS[param]).toBeDefined()
     }
+  })
+
+  test('des réglages anciens sont relus sans leurs champs morts', () => {
+    const lus = normalizeParams({ guidance: 7, steps: 30, sampler: 'euler', resolution: '4K', batch: 4 })
+    expect(lus).not.toHaveProperty('guidance')
+    expect(lus).not.toHaveProperty('sampler')
+    expect(lus.resolution).toBe('4K')
+    expect(lus.batch).toBe(4)
+    expect(lus.aspectRatio).toBe(DEFAULT_PARAMS.aspectRatio)
+  })
+
+  test('une entrée illisible ou hors énumération retombe sur les défauts', () => {
+    expect(normalizeParams(null)).toEqual(DEFAULT_PARAMS)
+    expect(normalizeParams('x')).toEqual(DEFAULT_PARAMS)
+    expect(normalizeParams({ batch: 3, aspectRatio: '3:2' })).toEqual(DEFAULT_PARAMS)
   })
 
   test('la graine par défaut est libre et non verrouillée', () => {

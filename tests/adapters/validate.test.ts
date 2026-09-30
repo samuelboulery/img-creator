@@ -121,4 +121,15 @@ describe('validation en frontière', () => {
     expect(() => parseGenerationRequest(null)).toThrow(BadRequestError)
     expect(() => parseGenerationRequest('boom')).toThrow(BadRequestError)
   })
+  test('la résolution est bornée par le modèle', () => {
+    expect(() => parseGenerationRequest(params({ resolution: '6K' }))).toThrow(BadRequestError)
+    expect(() =>
+      parseGenerationRequest(body({ adapterId: 'gpt-image-2', params: { ...body().params, resolution: '6K' } }))
+    ).toThrow(BadRequestError)
+    expect(
+      parseGenerationRequest(
+        body({ adapterId: 'gpt-image-2.5-flare', params: { ...body().params, resolution: '8K' } })
+      ).params.resolution
+    ).toBe('8K')
+  })
 })

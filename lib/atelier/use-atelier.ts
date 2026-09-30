@@ -6,7 +6,7 @@ import { drawSeed, resolveSeed } from '@/lib/adapters/shared'
 import { estimateCost } from './cost'
 import { toImageState, toReferenceImage } from './image-file'
 import { extractPalette } from './palette'
-import { DEFAULT_PARAMS, DEFAULT_RECIPE_STATE, type RecipeState } from './params'
+import { DEFAULT_PARAMS, DEFAULT_RECIPE_STATE, normalizeParams, type RecipeState } from './params'
 import { createRecipe } from './recipes'
 import { atelierReducer, initialAtelierState } from './reducer'
 import {
@@ -111,7 +111,7 @@ export function useAtelier() {
       text: readString(STORAGE_KEYS.textKey),
     })
     setPrefs(readPrefs())
-    setParams(readJson<GenerationParams>(STORAGE_KEYS.params, DEFAULT_PARAMS))
+    setParams(normalizeParams(readJson<unknown>(STORAGE_KEYS.params, null)))
     setItems(readJson<GalleryItem[]>(STORAGE_KEYS.session, []))
     setRecipes(readJson<Recipe[]>(STORAGE_KEYS.recipes, []))
     setOnboarding(
@@ -160,7 +160,7 @@ export function useAtelier() {
   function applyRecipe(entry: Recipe) {
     setActiveRecipeId(entry.id)
     setPromptSuffix(entry.promptSuffix)
-    setParams({ ...DEFAULT_PARAMS, ...entry.params })
+    setParams(normalizeParams({ ...DEFAULT_PARAMS, ...entry.params }))
     setRecipe({
       subjectImages: entry.subjectImages.map(toImageState),
       subjectWeight: entry.subjectWeight,

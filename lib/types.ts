@@ -40,9 +40,9 @@ export type Moderation = 'auto' | 'low'
 export type Language = 'auto' | 'fr' | 'en'
 
 /**
- * Réglages de rendu. Tous les modèles n'en supportent pas la totalité : voir
- * `lib/adapters/capabilities.ts`, qui décide de ce qui part et de ce qui porte
- * le badge « ignoré ici ».
+ * Réglages de rendu. Tous les modèles n'en lisent pas la totalité : voir
+ * `lib/adapters/capabilities.ts`, qui décide de ce qui part et de ce que
+ * l'inspecteur affiche.
  */
 export interface GenerationParams {
   aspectRatio: AspectRatio
@@ -55,10 +55,6 @@ export interface GenerationParams {
   transparent: boolean
   /** 20–100, sans effet en PNG. */
   compression: number
-  /** Guidage (CFG), 1–20 par pas de 0,5. */
-  guidance: number
-  steps: number
-  sampler: string
   personGeneration: PersonGeneration
   moderation: Moderation
   language: Language
