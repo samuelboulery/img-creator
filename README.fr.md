@@ -14,9 +14,9 @@ Un prompt, plusieurs modèles côte à côte — pas de compte, pas de base de d
 
 [Démarrage](#démarrage) · [Pourquoi](#pourquoi) · [Modèles](#modèles) · [Fonctionnement](#fonctionnement) · [English](README.md)
 
-<img src="docs/screenshot.png" alt="Obskura : bande de session, image sélectionnée sur la scène, composeur de prompt et inspecteur de réglages" width="900">
+<img src="docs/screenshots/01-fiche-image-screenmat.webp" alt="Obskura : bande de session, image sélectionnée sur la scène, composeur de prompt et fiche de l'image" width="900">
 
-<sub>Session de démonstration : les visuels sont dessinés au canvas par le script de capture, pas des sorties de modèle. Les regénérer avec <code>node scripts/screenshots.mjs</code>.</sub>
+<sub>Encadrées avec <a href="https://github.com/samuelboulery/screenmat">screenmat</a>. Session de démonstration : les visuels sont dessinés au canvas par le script de capture, pas des sorties de modèle. Les regénérer avec <code>SCREENMAT=../screenmat node scripts/screenshots.mjs</code>.</sub>
 
 </div>
 
@@ -29,7 +29,7 @@ La plupart des interfaces de génération d'images cachent la requête. Vous bou
 Obskura fait l'inverse. **L'inspecteur affiche le corps réel de la requête**, construit par la fonction pure que l'adapter envoie. Et il ne montre que les réglages que le modèle choisi lit : changer de modèle retire les contrôles qu'il ignore, avec une note sur ce qui a été ajouté et retiré. Ce que vous voyez est ce qui quitte votre navigateur.
 
 <div align="center">
-<img src="docs/screenshot-json.png" alt="La section Avancé de l'inspecteur montrant le corps exact de la requête" width="900">
+<img src="docs/screenshots/11-requete-screenmat.webp" alt="La section Avancé de l'inspecteur montrant le corps exact de la requête" width="900">
 </div>
 
 ## Fonctionnalités
@@ -46,6 +46,24 @@ Obskura fait l'inverse. **L'inspecteur affiche le corps réel de la requête**, 
 - **Papier et encre** — sombre d'abord, clair ensuite, en français et en anglais ; le chrome ne porte aucune couleur, les images gardent toutes les leurs.
 - **Estimation de coût locale** — un tarif par image éditable ; l'app n'interroge aucune grille tarifaire.
 - **Au clavier** — <kbd>⌘↵</kbd> génère, <kbd>⌘K</kbd> ouvre toutes les actions, <kbd>?</kbd> liste les raccourcis.
+
+## En images
+
+| | |
+|---|---|
+| <img src="docs/screenshots/02-comparaison-screenmat.webp" alt="Deux images du même prompt côte à côte, avec la liste des écarts" width="440"> | <img src="docs/screenshots/07-en-parallele-screenmat.webp" alt="Nano Banana 2 et GPT Image 2.5 Sunburst qui génèrent en parallèle" width="440"> |
+| **Comparer** — deux images côte à côte, chaque écart listé. | **En parallèle** — deux modèles, un prompt, la progression face à leur durée habituelle. |
+| <img src="docs/screenshots/04-menu-modele-screenmat.webp" alt="Le menu Modèle, avec l'état des clés, le prix par image et la case en parallèle" width="440"> | <img src="docs/screenshots/03-export-screenmat.webp" alt="Quatre images sélectionnées en grille, avec les options d'export" width="440"> |
+| **Menu Modèle** — clé présente ou non, prix par image, *en parallèle*. | **Export** — original, PNG ou JPEG, avec un manifeste des réglages. |
+| <img src="docs/screenshots/08-cle-demandee-screenmat.webp" alt="La scène demande une clé Google au premier Générer" width="440"> | <img src="docs/screenshots/05-palette-screenmat.webp" alt="La palette ⌘K filtrée sur gpt" width="440"> |
+| **Premier contact** — la clé se demande sur la scène ; rien ne part. | **⌘K** — toutes les actions, modèles, presets et préférences. |
+| <img src="docs/screenshots/06-historique-screenmat.webp" alt="Le tiroir Historique avec recherche et filtre par modèle" width="440"> | <img src="docs/screenshots/09-light-en-screenmat.webp" alt="Le thème clair, en anglais" width="440"> |
+| **Historique** — recherche, filtre par modèle, prompt modifié en différence. | **Thème clair, anglais** — papier et encre dans les deux sens. |
+
+<div align="center">
+<img src="docs/screenshots/10-mobile-screenmat.webp" alt="Obskura sur téléphone : la bande devient une ligne au-dessus de la scène" width="440">
+<br><sub>Sous 640 px, la bande passe en ligne et l'inspecteur s'ouvre en feuille.</sub>
+</div>
 
 ## Démarrage
 
